@@ -38,7 +38,7 @@ def test_cors_and_openapi(client):
         'Origin': 'http://localhost:5173', 'Access-Control-Request-Method': 'POST'})
     assert response.headers['access-control-allow-origin'] == 'http://localhost:5173'
     schema = client.get('/openapi.json').json()
-    assert set(schema['paths']) == {'/health', '/model', '/predict'}
+    assert {'/health', '/model', '/predict'} <= set(schema['paths'])
     assert schema['paths']['/predict']['post']['responses']['422']['content']['application/json']['schema']['$ref'].endswith('/ErrorResponse')
 
 
