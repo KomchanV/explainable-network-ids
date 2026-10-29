@@ -2,7 +2,7 @@
   import './layout.css';
   import type { LayoutProps } from './$types';
   let { children }: LayoutProps = $props();
-  const planned = ['Explainable AI', 'Model Insights'];
+  const planned = ['Model Insights'];
 </script>
 
 <svelte:head>

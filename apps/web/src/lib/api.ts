@@ -16,11 +16,12 @@ export function createApi(baseUrl: string, fetcher: typeof fetch = fetch) {
   if (!['http:', 'https:'].includes(base.protocol)) throw new Error('API URL must use HTTP or HTTPS.');
   const prefix = base.href.replace(/\/$/, '');
 
-  async function request<T>(path: string, init: RequestInit = {}, binary = false): Promise<T> {
+  async function request<T>(path: string, init: RequestInit = {}, binary = false, timeout = 15000): Promise<T> {
     let response: Response;
     try {
-      response = await fetcher(`${prefix}${path}`, { ...init, signal: AbortSignal.timeout(init.method === 'POST' ? 300000 : 15000) });
+      response = await fetcher(`${prefix}${path}`, { ...init, signal: AbortSignal.timeout(init.method === 'POST' ? 300000 : timeout) });
     } catch {
+      if (path.includes('/explanation')) throw new ApiError(0, 'explanation_timeout', 'Explanation request failed or timed out. Retry later; backend computation may still be running.');
       throw new ApiError(0, 'connection_error', 'Cannot reach the API. Check that the backend is running.');
     }
     if (!response.ok) {
@@ -46,6 +47,8 @@ export function createApi(baseUrl: string, fetcher: typeof fetch = fetch) {
       return request<components['schemas']['FlowPage']>(`${analysisPath(id)}/flows?${params}`);
     },
     flow: (id: string, row: number) => request<components['schemas']['FlowDetail']>(`${analysisPath(id)}/flows/${row}`),
+    explainFlow: (id: string, row: number) => request<components['schemas']['LocalExplanation']>(`${analysisPath(id)}/flows/${row}/explanation`, {}, false, 300000),
+    explainGlobal: (id: string, sampleSize = 50) => request<components['schemas']['GlobalExplanation']>(`${analysisPath(id)}/explanations/global?sample_size=${sampleSize}`, {}, false, 300000),
     export: (id: string) => request<Blob>(`${analysisPath(id)}/export`, {}, true),
     delete: (id: string) => request<void>(analysisPath(id), { method: 'DELETE' })
   };

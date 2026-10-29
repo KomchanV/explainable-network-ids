@@ -8,6 +8,7 @@ import asyncio
 import hashlib
 
 from apps.api.analyses import AnalysisError, AnalysisStore, router
+from apps.api.explanations import router as explanation_router
 from dataclasses import dataclass
 import logging
 import os
@@ -187,6 +188,7 @@ def create_app(settings: Settings | None = None):
         return PredictResponse(predictions=predictions.to_dict(orient='records'), **notes)
 
     app.include_router(router(artifact_for, ErrorResponse))
+    app.include_router(explanation_router(artifact_for, ErrorResponse))
     return app
 
 

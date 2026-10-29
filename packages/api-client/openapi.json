@@ -109,6 +109,64 @@
         "title": "ErrorResponse",
         "type": "object"
       },
+      "FeatureContribution": {
+        "properties": {
+          "absolute_contribution": {
+            "title": "Absolute Contribution",
+            "type": "number"
+          },
+          "feature": {
+            "title": "Feature",
+            "type": "string"
+          },
+          "raw_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Value"
+          },
+          "shap_value": {
+            "title": "Shap Value",
+            "type": "number"
+          },
+          "transformed_value": {
+            "title": "Transformed Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "feature",
+          "raw_value",
+          "transformed_value",
+          "shap_value",
+          "absolute_contribution"
+        ],
+        "title": "FeatureContribution",
+        "type": "object"
+      },
+      "FeatureImportance": {
+        "properties": {
+          "feature": {
+            "title": "Feature",
+            "type": "string"
+          },
+          "mean_abs_shap": {
+            "title": "Mean Abs Shap",
+            "type": "number"
+          }
+        },
+        "required": [
+          "feature",
+          "mean_abs_shap"
+        ],
+        "title": "FeatureImportance",
+        "type": "object"
+      },
       "FlowDetail": {
         "properties": {
           "ddos_probability": {
@@ -215,6 +273,76 @@
         "title": "FlowPrediction",
         "type": "object"
       },
+      "GlobalExplanation": {
+        "properties": {
+          "analysis_id": {
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "class_explained": {
+            "const": "DDoS",
+            "default": "DDoS",
+            "title": "Class Explained",
+            "type": "string"
+          },
+          "feature_importance": {
+            "items": {
+              "$ref": "#/components/schemas/FeatureImportance"
+            },
+            "title": "Feature Importance",
+            "type": "array"
+          },
+          "max_reconstruction_error": {
+            "title": "Max Reconstruction Error",
+            "type": "number"
+          },
+          "model_identifier": {
+            "title": "Model Identifier",
+            "type": "string"
+          },
+          "model_provenance": {
+            "enum": [
+              "synthetic",
+              "cic-ids2017",
+              "unspecified"
+            ],
+            "title": "Model Provenance",
+            "type": "string"
+          },
+          "sample_size": {
+            "title": "Sample Size",
+            "type": "integer"
+          },
+          "sampled_row_numbers": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Sampled Row Numbers",
+            "type": "array"
+          },
+          "sampling_method": {
+            "default": "Uniform without replacement across the entire uploaded analysis; row order restored.",
+            "title": "Sampling Method",
+            "type": "string"
+          },
+          "sampling_seed": {
+            "default": 42,
+            "title": "Sampling Seed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "sample_size",
+          "sampled_row_numbers",
+          "model_identifier",
+          "model_provenance",
+          "max_reconstruction_error",
+          "feature_importance"
+        ],
+        "title": "GlobalExplanation",
+        "type": "object"
+      },
       "HealthResponse": {
         "properties": {
           "model_available": {
@@ -237,6 +365,85 @@
           "model_available"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "LocalExplanation": {
+        "properties": {
+          "analysis_id": {
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "base_value": {
+            "title": "Base Value",
+            "type": "number"
+          },
+          "class_explained": {
+            "const": "DDoS",
+            "default": "DDoS",
+            "title": "Class Explained",
+            "type": "string"
+          },
+          "ddos_probability": {
+            "description": "Uncalibrated model output, not confidence or severity.",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Ddos Probability",
+            "type": "number"
+          },
+          "feature_contributions": {
+            "items": {
+              "$ref": "#/components/schemas/FeatureContribution"
+            },
+            "title": "Feature Contributions",
+            "type": "array"
+          },
+          "model_identifier": {
+            "title": "Model Identifier",
+            "type": "string"
+          },
+          "model_provenance": {
+            "enum": [
+              "synthetic",
+              "cic-ids2017",
+              "unspecified"
+            ],
+            "title": "Model Provenance",
+            "type": "string"
+          },
+          "prediction": {
+            "enum": [
+              "BENIGN",
+              "DDoS"
+            ],
+            "title": "Prediction",
+            "type": "string"
+          },
+          "reconstructed_probability": {
+            "title": "Reconstructed Probability",
+            "type": "number"
+          },
+          "reconstruction_error": {
+            "title": "Reconstruction Error",
+            "type": "number"
+          },
+          "row_number": {
+            "title": "Row Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "row_number",
+          "prediction",
+          "ddos_probability",
+          "analysis_id",
+          "base_value",
+          "reconstructed_probability",
+          "reconstruction_error",
+          "model_identifier",
+          "model_provenance",
+          "feature_contributions"
+        ],
+        "title": "LocalExplanation",
         "type": "object"
       },
       "ModelResponse": {
@@ -746,6 +953,116 @@
         "summary": "Summary"
       }
     },
+    "/api/v1/analyses/{id}/explanations/global": {
+      "get": {
+        "operationId": "explainAnalysisSample",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sample_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Sample Size",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Defaults to min(15, model feature count).",
+            "in": "query",
+            "name": "top_n",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Defaults to min(15, model feature count).",
+              "title": "Top N"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalExplanation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Gone"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Global Sample"
+      }
+    },
     "/api/v1/analyses/{id}/export": {
       "get": {
         "operationId": "exportAnalysis",
@@ -1192,6 +1509,94 @@
           }
         },
         "summary": "Detail"
+      }
+    },
+    "/api/v1/analyses/{id}/flows/{row_number}/explanation": {
+      "get": {
+        "operationId": "explainAnalysisFlow",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "row_number",
+            "required": true,
+            "schema": {
+              "title": "Row Number",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalExplanation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Gone"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Local"
       }
     },
     "/health": {

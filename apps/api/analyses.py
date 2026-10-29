@@ -87,6 +87,7 @@ class AnalysisStore:
         self.lock = threading.RLock()
         # One ingestion per process bounds parser/inference memory and temporary disk.
         self.ingestion = threading.Lock()
+        self.explanation = threading.Lock()
 
     def cleanup(self):
         with self.lock:

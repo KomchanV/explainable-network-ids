@@ -39,6 +39,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/analyses/{id}/explanations/global": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Global Sample */
+        get: operations["explainAnalysisSample"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/analyses/{id}/export": {
         parameters: {
             query?: never;
@@ -82,6 +99,23 @@ export interface paths {
         };
         /** Detail */
         get: operations["getAnalysisFlow"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analyses/{id}/flows/{row_number}/explanation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Local */
+        get: operations["explainAnalysisFlow"];
         put?: never;
         post?: never;
         delete?: never;
@@ -192,6 +226,26 @@ export interface components {
         ErrorResponse: {
             error: components["schemas"]["ErrorDetail"];
         };
+        /** FeatureContribution */
+        FeatureContribution: {
+            /** Absolute Contribution */
+            absolute_contribution: number;
+            /** Feature */
+            feature: string;
+            /** Raw Value */
+            raw_value: number | null;
+            /** Shap Value */
+            shap_value: number;
+            /** Transformed Value */
+            transformed_value: number;
+        };
+        /** FeatureImportance */
+        FeatureImportance: {
+            /** Feature */
+            feature: string;
+            /** Mean Abs Shap */
+            mean_abs_shap: number;
+        };
         /** FlowDetail */
         FlowDetail: {
             /**
@@ -237,6 +291,42 @@ export interface components {
             /** Row Number */
             row_number: number;
         };
+        /** GlobalExplanation */
+        GlobalExplanation: {
+            /** Analysis Id */
+            analysis_id: string;
+            /**
+             * Class Explained
+             * @default DDoS
+             * @constant
+             */
+            class_explained: "DDoS";
+            /** Feature Importance */
+            feature_importance: components["schemas"]["FeatureImportance"][];
+            /** Max Reconstruction Error */
+            max_reconstruction_error: number;
+            /** Model Identifier */
+            model_identifier: string;
+            /**
+             * Model Provenance
+             * @enum {string}
+             */
+            model_provenance: "synthetic" | "cic-ids2017" | "unspecified";
+            /** Sample Size */
+            sample_size: number;
+            /** Sampled Row Numbers */
+            sampled_row_numbers: number[];
+            /**
+             * Sampling Method
+             * @default Uniform without replacement across the entire uploaded analysis; row order restored.
+             */
+            sampling_method: string;
+            /**
+             * Sampling Seed
+             * @default 42
+             */
+            sampling_seed: number;
+        };
         /** HealthResponse */
         HealthResponse: {
             /** Model Available */
@@ -248,6 +338,44 @@ export interface components {
             status: "ok";
             /** Version */
             version: string;
+        };
+        /** LocalExplanation */
+        LocalExplanation: {
+            /** Analysis Id */
+            analysis_id: string;
+            /** Base Value */
+            base_value: number;
+            /**
+             * Class Explained
+             * @default DDoS
+             * @constant
+             */
+            class_explained: "DDoS";
+            /**
+             * Ddos Probability
+             * @description Uncalibrated model output, not confidence or severity.
+             */
+            ddos_probability: number;
+            /** Feature Contributions */
+            feature_contributions: components["schemas"]["FeatureContribution"][];
+            /** Model Identifier */
+            model_identifier: string;
+            /**
+             * Model Provenance
+             * @enum {string}
+             */
+            model_provenance: "synthetic" | "cic-ids2017" | "unspecified";
+            /**
+             * Prediction
+             * @enum {string}
+             */
+            prediction: "BENIGN" | "DDoS";
+            /** Reconstructed Probability */
+            reconstructed_probability: number;
+            /** Reconstruction Error */
+            reconstruction_error: number;
+            /** Row Number */
+            row_number: number;
         };
         /** ModelResponse */
         ModelResponse: {
@@ -601,6 +729,77 @@ export interface operations {
             };
         };
     };
+    explainAnalysisSample: {
+        parameters: {
+            query?: {
+                sample_size?: number;
+                /** @description Defaults to min(15, model feature count). */
+                top_n?: number | null;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GlobalExplanation"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Gone */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     exportAnalysis: {
         parameters: {
             query?: never;
@@ -857,6 +1056,74 @@ export interface operations {
             };
             /** @description Unsupported Media Type */
             415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    explainAnalysisFlow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                row_number: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocalExplanation"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Gone */
+            410: {
                 headers: {
                     [name: string]: unknown;
                 };

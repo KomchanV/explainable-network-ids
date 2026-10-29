@@ -212,3 +212,181 @@ def test_upload_deadline_releases_slot(client, monkeypatch):
     asyncio.run(run())
     assert not store.ingestion.locked()
     assert not list(store.root.iterdir())
+
+
+def test_local_explanation_parity_imputation_and_order(client, bundle):
+    frame = bundle[1]['explanation_sample'].copy()
+    frame.iloc[0, 0] = np.nan
+    id = upload(client, frame).json()['id']
+    base = f'/api/v1/analyses/{id}'
+    labels = set()
+    for number in range(1, len(frame) + 1):
+        response = client.get(f'{base}/flows/{number}/explanation')
+        assert response.status_code == 200, response.text
+        body = response.json()
+        stored = client.get(f'{base}/flows/{number}').json()
+        labels.add(body['prediction'])
+        assert body['ddos_probability'] == stored['ddos_probability']
+        assert body['class_explained'] == 'DDoS'
+        features = body['feature_contributions']
+        assert [f['feature'] for f in features] == bundle[1]['feature_schema']
+        reconstructed = body['base_value'] + sum(f['shap_value'] for f in features)
+        np.testing.assert_allclose(reconstructed, stored['ddos_probability'], atol=1e-6, rtol=1e-5)
+        assert body['reconstructed_probability'] == pytest.approx(reconstructed)
+        assert body['reconstruction_error'] <= 1e-6 + 1e-5 * stored['ddos_probability']
+        transformed = bundle[1]['pipeline'][:-1].transform(frame.iloc[[number-1]])[0]
+        np.testing.assert_allclose([f['transformed_value'] for f in features], transformed)
+        if number == 1:
+            assert features[0]['raw_value'] is None
+        assert all(np.isfinite(f['shap_value']) for f in features)
+    assert labels == {'BENIGN', 'DDoS'}
+
+
+def test_global_explanation_sample_and_importance(client, bundle):
+    from src.explain import explain_flows, global_importance
+    frame = pd.concat([bundle[1]['explanation_sample']] * 12, ignore_index=True)
+    id = upload(client, frame).json()['id']
+    path = f'/api/v1/analyses/{id}/explanations/global'
+    body = client.get(path, params={'sample_size': 7, 'top_n': 3}).json()
+    assert body == client.get(path, params={'sample_size': 7, 'top_n': 3}).json()
+    selected = np.sort(np.random.default_rng(42).choice(len(frame), size=7, replace=False))
+    assert body['sampled_row_numbers'] == (selected + 1).tolist()
+    assert max(selected) > 7
+    expected = global_importance(explain_flows(bundle[1], frame.iloc[selected])).head(3)
+    assert [f['feature'] for f in body['feature_importance']] == expected.feature.tolist()
+    np.testing.assert_allclose([f['mean_abs_shap'] for f in body['feature_importance']], expected.mean_abs_shap)
+    assert body['sample_size'] == 7
+    assert body['sampling_seed'] == 42
+    assert client.get(path).json()['sample_size'] == 50
+    assert client.get(path + '?sample_size=100').json()['sample_size'] == 100
+    for query in ('sample_size=101', 'sample_size=0', 'top_n=0', 'top_n=9999'):
+        assert client.get(path + '?' + query).status_code == 422
+
+
+def test_explanation_lifecycle_busy_and_missing_model(client, bundle):
+    id = upload(client, bundle[1]['explanation_sample'].iloc[:2]).json()['id']
+    local = f'/api/v1/analyses/{id}/flows/1/explanation'
+    global_path = f'/api/v1/analyses/{id}/explanations/global'
+    for path in (local, global_path):
+        store = client.app.state.analyses
+        store.explanation.acquire()
+        try:
+            response = client.get(path)
+            assert response.status_code == 503
+            assert response.json()['error']['code'] == 'explanation_busy'
+        finally:
+            store.explanation.release()
+    assert client.get(f'/api/v1/analyses/{id}/flows/0/explanation').status_code == 404
+    assert client.get(f'/api/v1/analyses/{id}/flows/999/explanation').status_code == 404
+    artifact = client.app.state.artifact
+    client.app.state.artifact = None
+    assert client.get(local).json()['error']['code'] == 'model_unavailable'
+    client.app.state.artifact = artifact
+    store.sessions[id].deadline = time.monotonic() - 1
+    for path in (local, global_path):
+        assert client.get(path).status_code == 410
+    assert not list(store.root.iterdir())
+    for path in ('flows/1/explanation', 'explanations/global'):
+        assert client.get(f'/api/v1/analyses/nonexistent/{path}').status_code == 404
+
+
+def test_explanation_failures_are_safe(client, bundle, monkeypatch):
+    import src.explain
+    id = upload(client, bundle[1]['explanation_sample'].iloc[:2]).json()['id']
+    local = f'/api/v1/analyses/{id}/flows/1/explanation'
+    original = src.explain.explain_flows
+    def fail(*args, **kwargs):
+        raise ValueError('private-upload-value /local/model.joblib')
+    monkeypatch.setattr(src.explain, 'explain_flows', fail)
+    response = client.get(local)
+    assert response.status_code == 500
+    assert response.json()['error']['code'] == 'shap_failure'
+    assert 'private-upload' not in response.text and 'joblib' not in response.text
+    def corrupt(*args, **kwargs):
+        explanation = original(*args, **kwargs)
+        explanation.values[0, 0] += .1
+        return explanation
+    monkeypatch.setattr(src.explain, 'explain_flows', corrupt)
+    assert client.get(local).json()['error']['code'] == 'reconstruction_failure'
+    def nonfinite(*args, **kwargs):
+        explanation = original(*args, **kwargs)
+        explanation.data[0, 0] = np.nan
+        return explanation
+    monkeypatch.setattr(src.explain, 'explain_flows', nonfinite)
+    assert client.get(local).json()['error']['code'] == 'shap_failure'
+    assert not client.app.state.analyses.explanation.locked()
+
+
+@pytest.mark.parametrize('endpoint', ['flows/1/explanation', 'explanations/global'])
+@pytest.mark.parametrize('lifecycle', ['delete', 'expire'])
+def test_lifecycle_overlaps_explanation_without_holding_store_lock(client, bundle, monkeypatch, endpoint, lifecycle):
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    import src.explain
+    id = upload(client, bundle[1]['explanation_sample'].iloc[:2]).json()['id']
+    entered, release = threading.Event(), threading.Event()
+    original = src.explain.explain_flows
+    def slow(*args, **kwargs):
+        entered.set()
+        assert release.wait(5)
+        return original(*args, **kwargs)
+    monkeypatch.setattr(src.explain, 'explain_flows', slow)
+    with ThreadPoolExecutor() as executor:
+        pending = executor.submit(client.get, f'/api/v1/analyses/{id}/{endpoint}')
+        assert entered.wait(5)
+        try:
+            assert client.get(f'/api/v1/analyses/{id}/{endpoint}').json()['error']['code'] == 'explanation_busy'
+            if lifecycle == 'delete':
+                assert client.delete(f'/api/v1/analyses/{id}').status_code == 204
+            else:
+                client.app.state.analyses.sessions[id].deadline = time.monotonic() - 1
+                client.app.state.analyses.cleanup()
+            assert not list(client.app.state.analyses.root.iterdir())
+        finally:
+            release.set()
+        assert pending.result().status_code == (404 if lifecycle == 'delete' else 410)
+
+
+@pytest.mark.parametrize('kind', ['values_shape', 'bases_shape', 'data_shape', 'feature_order', 'infinite', 'stored_probability'])
+def test_explanation_rejects_invalid_numerical_contract(client, bundle, monkeypatch, kind):
+    import src.explain
+    id = upload(client, bundle[1]['explanation_sample'].iloc[:2]).json()['id']
+    original = src.explain.explain_flows
+    def malformed(*args, **kwargs):
+        from types import SimpleNamespace
+        actual = original(*args, **kwargs)
+        explanation = SimpleNamespace(values=actual.values, base_values=actual.base_values,
+                                      data=actual.data, feature_names=actual.feature_names)
+        if kind == 'values_shape':
+            explanation.values = explanation.values[:, :-1]
+        elif kind == 'bases_shape':
+            explanation.base_values = np.array([[.5]])
+        elif kind == 'data_shape':
+            explanation.data = explanation.data[:, :-1]
+        elif kind == 'feature_order':
+            explanation.feature_names = explanation.feature_names[::-1]
+        elif kind == 'infinite':
+            explanation.values[0, 0] = np.inf
+        return explanation
+    monkeypatch.setattr(src.explain, 'explain_flows', malformed)
+    if kind == 'stored_probability':
+        client.app.state.analyses.sessions[id].predictions.loc[0, 'ddos_probability'] = .123456789
+    for path in ('flows/1/explanation', 'explanations/global'):
+        response = client.get(f'/api/v1/analyses/{id}/{path}')
+        assert response.status_code == 500
+        expected = 'reconstruction_failure' if kind == 'stored_probability' else 'shap_failure'
+        assert response.json()['error']['code'] == expected
+    assert not client.app.state.analyses.explanation.locked()
+
+
+def test_small_global_sample_and_deleted_session(client, bundle):
+    id = upload(client, bundle[1]['explanation_sample'].iloc[:2]).json()['id']
+    path = f'/api/v1/analyses/{id}/explanations/global'
+    result = client.get(path).json()
+    assert result['sample_size'] == 2
+    assert result['sampled_row_numbers'] == [1, 2]
+    assert len(result['feature_importance']) == len(bundle[1]['feature_schema'])
+    assert client.delete(f'/api/v1/analyses/{id}').status_code == 204
+    assert client.get(path).status_code == 404
+    assert client.get(f'/api/v1/analyses/{id}/flows/1/explanation').status_code == 404
+    assert not list(client.app.state.analyses.root.iterdir())

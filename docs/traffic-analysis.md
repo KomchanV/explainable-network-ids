@@ -109,3 +109,63 @@ No background inference queue, persistent database, authentication, live packet
 capture, continuous monitoring, blocking, model upload/training, or HTTP SHAP is
 implemented. Large requests can take minutes and no calibrated-probability or
 new scientific performance claims are made.
+
+## Investigating a prediction with SHAP
+
+In Flow Explorer, choose **Inspect** on a row, then **Explain Prediction**.
+Explanations are requested on demand, including for BENIGN predictions; they
+always explain P(DDoS), not the probability of the predicted class. The local
+section shows the original row/prediction, stored P(DDoS), training-path SHAP
+baseline, reconstructed output, absolute reconstruction error and model SHA-256
+identifier/provenance. A provenance of synthetic identifies a software fixture,
+not scientific evaluation evidence.
+
+Orange upward contributions increase P(DDoS) from the baseline; teal downward
+contributions decrease it. The waterfall follows the additive path. Choose top
+12 or all features; **Other features** sums every hidden signed term. Full
+contributions are always returned and the table retains original model order.
+The available numeric input and post-imputation model value are separate columns.
+Missing/nonfinite input is null and labeled Missing → fitted median, never zero.
+Original CSV spelling and ignored identifiers are not retained.
+
+The backend verifies `baseline + sum(all SHAP contributions) ≈ stored P(DDoS)`
+with absolute tolerance 1e-6 and relative tolerance 1e-5, matching the scientific
+engine. Display rounding uses six decimal places (scientific notation for tiny
+nonzero contributions); rounding may prevent the printed terms from adding
+exactly. Shape, finite-value or reconstruction failures reject the explanation.
+
+In **Global Explainability**, choose 1–100 flows (default 50) and explicitly
+**Generate Global Explanation**. The actual sample is limited by session size.
+Sampling is uniform without replacement over the entire uploaded analysis, using
+NumPy default_rng seed 42, then restoring original row order. It is reproducible
+for the same analysis and sample size, but does not guarantee rare-class coverage.
+Mean absolute SHAP values rank the magnitude of contributions in that sample;
+they do not show direction and do not explain an entire network/population.
+
+SHAP characterizes model behavior, not causal evidence of a network attack.
+P(DDoS) remains uncalibrated, not validated confidence or threat severity. This
+is an offline academic prototype.
+
+### Explanation API and resource limits
+
+- `GET /api/v1/analyses/{id}/flows/{row_number}/explanation` returns one full
+  positive-class contribution vector, raw available/transformed numeric values,
+  baseline, reconstruction/error, stored prediction and model provenance.
+- `GET /api/v1/analyses/{id}/explanations/global?sample_size=50&top_n=15` returns
+  mean absolute contributions sorted descending, actual sample count, sampled
+  row numbers, seed/method and model provenance. Omitted top_n defaults to the
+  smaller of 15 and model feature count; explicit values above that count fail.
+
+One SHAP request runs at a time in the local single-worker process. Another
+request receives 503 `explanation_busy`; wait and retry. Requests never explain
+more than 100 flows and never automatically explain all 50,000 uploaded rows.
+The browser allows five minutes for bounded explanation requests. A timeout or
+leaving the view does **not** necessarily cancel Python computation. There is no
+explanation cache; each click computes again. Existing session TTL/deletion and
+resource bounds apply. Deletion/expiry during calculation rejects the result
+after computation without reopening deleted files.
+
+Errors retain the existing envelope: 503 `model_unavailable`/`explanation_busy`,
+404 `analysis_not_found`/`flow_not_found`, 410 `analysis_expired`, 422 schema/query
+errors, 500 `shap_failure`/`reconstruction_failure`. Errors do not echo uploaded
+values, model artifacts, filesystem paths or stack traces.
