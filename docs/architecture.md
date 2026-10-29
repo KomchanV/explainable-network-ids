@@ -68,8 +68,8 @@ server-side and return a generic 500. JSON `/predict` flows are not persisted. C
 model features and predictions as described below; raw flow values are not logged.
 
 CPU-bound inference uses synchronous FastAPI routes and its worker thread pool.
-Training and explanations remain existing CLI/Streamlit capabilities; exposing
-long-running ML jobs over HTTP is deferred. The API does not implement authentication,
+Training remains a CLI capability. Bounded, on-demand SHAP explanations are exposed
+through the analysis resources; no training or unbounded ML jobs run over HTTP. The API does not implement authentication,
 rate limiting, deployment hardening, or a production ingestion system. Local
 servers bind to loopback and CORS allows only the two documented development origins.
 
@@ -78,7 +78,7 @@ servers bind to loopback and CORS allows only the two documented development ori
 The SvelteKit dashboard fetches health and saved-model metadata after mounting.
 It has connection/loading errors, an unavailable-model state, and a refresh action.
 Traffic Analysis links to `/analyze`; successful uploads link to `/analyses/[id]`.
-SHAP and Model Insights remain planned labels.
+Local and global SHAP investigation lives in the current Flow Explorer; Model Insights remains planned.
 The reusable layout and checked-in shadcn Button support subsequent UI work.
 No fabricated traffic counters or new experimental metrics are displayed.
 
@@ -141,3 +141,31 @@ errors, longer upload timeouts, Blob export and generated-schema types.
 `AnalysisSummary.svelte` is shared by upload, explorer and dashboard; browser local
 storage contains only the current analysis ID. OpenAPI includes raw CSV upload
 and CSV export formats and remains synchronized through the original Nx targets.
+
+## On-demand SHAP investigation
+
+`apps/api/explanations.py` adapts the unchanged `src.explain.explain_flows` and
+`global_importance`. Both local and global requests explain class 1 (DDoS) using
+TreeExplainer, tree-path-dependent perturbation and raw output. For the fitted
+Random Forest this is probability space. The adapter checks complete feature
+order, dimensions, finite values and reconstruction against **stored** upload
+predictions using the engine's `atol=1e-6, rtol=1e-5`. It never changes the model
+or substitutes the saved held-out sample for uploaded flows.
+
+The store owns a nonblocking explanation lock: one local or global computation
+per process, separate from ingestion. At most 100 numeric rows and predictions
+are copied under the store lock; SHAP runs in a synchronous worker route outside
+that lock. Delete/expiry can proceed during computation. A final locked validity
+check rejects results whose sessions were deleted/expired. There is no explanation
+cache, new persistence, job queue or background ML infrastructure. Computation
+already running may continue after HTTP timeout/disconnection.
+
+The generated local contract retains every signed attribution in model order,
+alongside pre-imputation numeric values (null for unavailable/nonfinite input) and
+the actual transformed values. The frontend waterfall sorts by magnitude and
+groups all undisplayed terms into Other features, preserving the full sum. Its
+domain expands for additive paths outside [0,1]. A complete table remains available.
+Global importance uses seed 42, NumPy default_rng uniform sampling without
+replacement across all session rows and a descending mean absolute SHAP ranking.
+It describes only that uploaded sample. Neither view supplies causal evidence,
+calibration, confidence, severity or real-time detection.

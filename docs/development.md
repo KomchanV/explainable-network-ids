@@ -130,3 +130,24 @@ ignored `apps/web/test-results/flows.csv`; it never trains/overwrites `models/`.
 Stop other processes using those test ports first. Traces are retained on failure.
 CI runs E2E separately after unit checks/build and uploads failure artifacts.
 `pnpm test` remains the fast engine/API/client suite; E2E is explicit.
+
+## SHAP milestone verification
+
+Use the existing full commands: `pnpm install --frozen-lockfile`, `pnpm check`,
+`pnpm test`, `pnpm build`, `pnpm contract:check`, and
+`pnpm nx e2e web --output-style=static`. When available, the trusted model is
+checked read-only with `pnpm nx run ids-core:compatibility`; no task retrains it.
+
+API tests use small temporary synthetic models for positive-class/local stored
+prediction parity, feature ordering, fitted median values, deterministic global
+sampling/mean absolute importance, finite shapes, query limits, busy slots and
+delete/expiry behavior. Frontend tests cover waterfall aggregation/geometry,
+signed precision, table rendering and stale-response invalidation. Browser tests
+compare rendered local/global values against actual API responses from the
+isolated synthetic model, and exercise selection races and failure states. These
+fixtures validate software behavior, not scientific generalization.
+
+In a sandbox that denies Nx plugin sockets, local verification can use
+`NX_DAEMON=false NX_ISOLATE_PLUGINS=false` without changing project configuration.
+Playwright still needs permission to bind its documented loopback test ports and
+launch Chromium.
