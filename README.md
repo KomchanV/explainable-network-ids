@@ -2,8 +2,14 @@
 
 A university Network Security course MVP: classify offline network flow CSVs as
 BENIGN (0) or DDoS (1), evaluate a Random Forest on labeled held-out data, and
-explain its predictions with SHAP. Runs locally with Streamlit; no packet capture,
-live monitoring, database, or external inference service.
+explain its predictions with SHAP. Version 0.2 adds an Nx workspace, a SvelteKit web frontend, and a local FastAPI
+adapter. The original Streamlit workflow remains available. No packet capture,
+live monitoring, database, or external inference service is included.
+
+**Development version:** `0.2.0-alpha.1`. The existing `0.1.0-alpha.1` release and
+its scientific implementation are preserved. The training, batch inference,
+evaluation, SHAP explanation, and local dashboard workflows are implemented and
+tested, but the project is an academic prototype and is not production-ready.
 
 Inspired by *E-XAI: Evaluating Black-Box Explainable AI Frameworks for Network
 Intrusion Detection*, IEEE Access (2024),
@@ -12,7 +18,73 @@ This is a simplified course implementation, **not a reproduction of the paper's
 experiments, methodology, or results**. The IEEE page required a JavaScript/robot
 check during development; no claim is made to have reviewed its full text.
 
-## Setup
+## Monorepo quick start (v0.2)
+
+Use **Node 22.17+**, **pnpm 11.4.0**, and **Python 3.11–3.13**. Run from the root:
+
+```bash
+python3.13 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements-api.txt
+npm install --global pnpm@11.4.0
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+Open <http://127.0.0.1:5173> for the web dashboard and
+<http://127.0.0.1:8000/docs> for FastAPI. The dashboard reads actual service health
+and saved model metadata. Both services start without a dataset or model;
+model-dependent requests return a clear 503 until a trusted artifact is configured.
+No model training is part of installation, development startup, or build.
+
+```bash
+pnpm dev:web                  # Nx: SvelteKit only
+pnpm dev:api                  # Nx: FastAPI only
+pnpm test                     # Python engine, API, frontend tests
+pnpm check                    # Python checks, schema drift, Svelte/TypeScript
+pnpm build                    # SvelteKit Node build
+pnpm contract:generate        # FastAPI -> OpenAPI -> TypeScript
+pnpm graph                    # Nx dependency graph
+pnpm nx run ids-core:compatibility  # trusted model CLI + SHAP checks (if available)
+```
+
+```text
+apps/
+  web/                    SvelteKit 3, Svelte 5, Tailwind 4, shadcn-svelte
+  api/                    FastAPI adapter and API tests
+packages/
+  api-client/             checked-in OpenAPI and generated TypeScript contract
+  ids-core/               future packaging boundary documentation
+src/                      unchanged Python ML engine (Nx project: ids-core)
+project.json              root engine registration, including Python tests/scripts
+scripts/                  Python launcher, contract export, compatibility checks
+nx.json                   Nx graph/task/cache configuration
+package.json              pnpm workflows; version 0.2.0-alpha.1
+pnpm-workspace.yaml
+pnpm-lock.yaml
+data/ models/ reports/     existing ignored local data and scientific artifacts
+docs/                     architecture, development, migration, research evidence
+```
+
+The graph is `web -> api-client -> api -> ids-core`. Python stays in `src` because
+existing Joblib bundles reference `src.preprocess.NumericFeatures`. Nx orchestrates
+commands and is not an ML runtime dependency. Original `python -m src.*` and
+`streamlit run app.py` entry points remain valid. Only trusted operator-controlled
+model paths are accepted; models cannot be uploaded through the API.
+
+Configuration, Nx targets, schema generation, and clean-clone setup are explained
+in [development workflow](docs/development.md). See [architecture](docs/architecture.md)
+for boundaries and caching decisions, and [migration verification](docs/migration-v0.2.md)
+for measured compatibility results and remaining work.
+
+## Existing Python and scientific workflows
+
+The sections below retain the v0.1 scientific behavior and reproduction commands.
+Use `requirements-api.txt` for the complete v0.2 environment, or the original
+`requirements.txt` when running only Python/Streamlit. Training commands are
+explicit experiments and are not required to start either UI.
+
+### Python setup
 
 Use **Python 3.11–3.13**. The pinned SHAP/Numba versions do not support Python 3.14.
 Run every command from this repository root. Python 3.13 is used in the examples.
@@ -177,6 +249,8 @@ models/                 local trained bundle and reports (ignored)
 reports/figures/        generated plots (ignored)
 docs/implementation-plan.md
 requirements.txt
+CHANGELOG.md
+RELEASE_NOTES.md
 ```
 
 ## Limitations and academic use

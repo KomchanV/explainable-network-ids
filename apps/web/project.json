@@ -1,0 +1,15 @@
+{
+  "name": "web",
+  "projectType": "application",
+  "tags": ["type:app", "lang:typescript"],
+  "implicitDependencies": ["api-client"],
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "!{projectRoot}/.svelte-kit/**/*", "!{projectRoot}/build/**/*", "sharedGlobals", { "env": "PUBLIC_API_BASE_URL" }]
+  },
+  "targets": {
+    "serve": { "command": "pnpm --filter web dev" },
+    "build": { "command": "pnpm --filter web build", "cache": true, "inputs": ["default", "^default"], "outputs": ["{projectRoot}/build", "{projectRoot}/.svelte-kit"] },
+    "check": { "command": "pnpm --filter web check", "cache": true, "inputs": ["default", "^default"] },
+    "test": { "command": "pnpm --filter web test", "cache": true, "inputs": ["default", "^default"] }
+  }
+}

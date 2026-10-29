@@ -1,0 +1,7 @@
+packages:
+  - apps/*
+  - packages/*
+allowBuilds:
+  nx: true
+minimumReleaseAgeExclude:
+  - shadcn-svelte@1.7.2

@@ -1,0 +1,13 @@
+{
+  "name": "api",
+  "projectType": "application",
+  "tags": ["type:app", "lang:python"],
+  "implicitDependencies": ["ids-core"],
+  "targets": {
+    "serve": { "command": "node scripts/python.mjs -m uvicorn apps.api.main:app --reload --host 127.0.0.1 --port 8000 --reload-dir apps/api --reload-dir src" },
+    "test": { "command": "node scripts/python.mjs -m pytest apps/api/tests -q", "cache": false },
+    "check": { "command": "node scripts/python.mjs -m compileall -q apps/api", "cache": false },
+    "openapi": { "command": "node scripts/python.mjs -m scripts.export_openapi", "cache": false },
+    "openapi-check": { "command": "node scripts/python.mjs -m scripts.export_openapi --check", "cache": false }
+  }
+}

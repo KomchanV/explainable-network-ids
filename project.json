@@ -1,0 +1,16 @@
+{
+  "name": "ids-core",
+  "projectType": "library",
+  "sourceRoot": "src",
+  "tags": ["type:engine", "lang:python"],
+  "namedInputs": { "default": ["{projectRoot}/**/*", "pythonCore"] },
+  "targets": {
+    "test": { "command": "node scripts/python.mjs -m pytest tests -q", "cache": false },
+    "check": { "command": "node scripts/python.mjs -m compileall -q src scripts app.py", "cache": false },
+    "train": { "command": "node scripts/python.mjs -m src.train", "cache": false },
+    "predict": { "command": "node scripts/python.mjs -m src.predict", "cache": false },
+    "explain": { "command": "node scripts/python.mjs -m src.explain", "cache": false },
+    "compatibility": { "command": "node scripts/python.mjs -m scripts.verify_migration", "cache": false },
+    "dashboard": { "command": "node scripts/python.mjs -m streamlit run app.py", "cache": false, "continuous": true }
+  }
+}

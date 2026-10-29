@@ -1,8 +1,19 @@
 .venv/
 __pycache__/
 .pytest_cache/
+.coverage
+.coverage.*
+.mypy_cache/
+.ruff_cache/
+.tox/
 *.py[cod]
 .DS_Store
+.env
+.env.*
+!.env.example
+build/
+dist/
+*.egg-info/
 data/raw/*
 data/processed/*
 models/*
@@ -11,3 +22,13 @@ reports/*
 !data/processed/.gitkeep
 !models/.gitkeep
 !reports/.gitkeep
+
+# Monorepo tooling and frontend outputs
+node_modules/
+.nx/
+.svelte-kit/
+apps/web/build/
+coverage/
+playwright-report/
+test-results/
+.pnpm-store/
