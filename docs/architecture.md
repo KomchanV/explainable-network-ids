@@ -64,7 +64,8 @@ a Joblib file. Artifact paths are trusted operator configuration only. Request
 validation uses a generic error without echoing raw flow values; expected feature
 errors retain the engine's actionable message. Error bodies use
 `{"error":{"code":"...","message":"..."}}`. Unexpected exceptions are logged
-server-side and return a generic 500. No flows are persisted or logged by the adapter.
+server-side and return a generic 500. JSON `/predict` flows are not persisted. CSV analysis retains bounded temporary
+model features and predictions as described below; raw flow values are not logged.
 
 CPU-bound inference uses synchronous FastAPI routes and its worker thread pool.
 Training and explanations remain existing CLI/Streamlit capabilities; exposing
@@ -76,7 +77,8 @@ servers bind to loopback and CORS allows only the two documented development ori
 
 The SvelteKit dashboard fetches health and saved-model metadata after mounting.
 It has connection/loading errors, an unavailable-model state, and a refresh action.
-Future sections appear as planned labels rather than links to nonexistent routes.
+Traffic Analysis links to `/analyze`; successful uploads link to `/analyses/[id]`.
+SHAP and Model Insights remain planned labels.
 The reusable layout and checked-in shadcn Button support subsequent UI work.
 No fabricated traffic counters or new experimental metrics are displayed.
 
@@ -109,3 +111,33 @@ compatibility checks, training, and servers are uncached. Tests may inspect igno
 local artifacts; training and prediction depend on mutable datasets and models.
 Do not enable caching for these tasks without declaring every external input,
 environment version, and generated output. There is no remote cache configured.
+
+
+## CSV analysis resources
+
+`apps/api/analyses.py` owns the resource schemas, router and process-local store.
+A raw `text/csv` upload is streamed to an anonymous temporary file with a 200 MiB
+byte limit and five-minute deadline. A nonblocking ingestion lock bounds parsing
+and inference to one batch; `run_in_threadpool` keeps CPU work off the event loop.
+A bounded shape preflight checks columns/cells/record size, then the unchanged
+engine `read_csv(max_rows=50000)`, `predict_batch` and `validate_features` provide
+all scientific semantics. There is no preprocessing implementation in the adapter.
+
+Result dataframes stay in memory. Only validated numeric model features are
+serialized to JSONL on disk with offsets for single-row reads; ignored values
+are discarded. A store lock coordinates retrieval/deletion/expiry and stable
+filtering/sorting/pagination. No retrieval or export runs inference again. Model
+identity is the SHA-256 of the trusted configured artifact. Five-session, disk,
+row/cell and TTL limits bound the local lifecycle. An async sweeper performs
+periodic expiry; graceful lifespan shutdown removes the process directory.
+See [API and lifecycle details](traffic-analysis.md), including crash leftovers
+and the single-worker/no-auth limitations. No database or job infrastructure was
+introduced.
+
+SvelteKit `/analyze` handles file selection/drop, validation, availability and
+busy/error/success feedback. `/analyses/[id]` fetches a summary, one result page,
+and selected-flow details separately. The shared `createApi` handles structured
+errors, longer upload timeouts, Blob export and generated-schema types.
+`AnalysisSummary.svelte` is shared by upload, explorer and dashboard; browser local
+storage contains only the current analysis ID. OpenAPI includes raw CSV upload
+and CSV export formats and remains synchronized through the original Nx targets.

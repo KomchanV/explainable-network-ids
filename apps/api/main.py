@@ -3,7 +3,11 @@
 Only a server operator can configure the trusted Joblib path. Requests never
 select, upload, or deserialize models. Run from the repository root.
 """
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
+import asyncio
+import hashlib
+
+from apps.api.analyses import AnalysisError, AnalysisStore, router
 from dataclasses import dataclass
 import logging
 import os
@@ -97,22 +101,36 @@ def create_app(settings: Settings | None = None):
         # Load once per worker, off the import/OpenAPI-generation path. No fitting.
         from src.predict import load_artifact
         app.state.artifact = None
+        app.state.analyses = AnalysisStore()
+        app.state.model_identifier = 'unavailable'
+        cleanup = asyncio.create_task(app.state.analyses.sweep())
         try:
             app.state.artifact = load_artifact(settings.model_path)
+            app.state.model_identifier = 'sha256:' + hashlib.sha256(settings.model_path.read_bytes()).hexdigest()
             logger.info('Trusted IDS artifact loaded; provenance=%s',
                         app.state.artifact['metadata']['provenance'])
         except (OSError, ValueError):
             logger.warning('IDS model unavailable; health remains accessible', exc_info=True)
-        yield
-        app.state.artifact = None
+        try:
+            yield
+        finally:
+            cleanup.cancel()
+            with suppress(asyncio.CancelledError):
+                await cleanup
+            app.state.analyses.close()
+            app.state.artifact = None
 
     app = FastAPI(title='Explainable Network IDS API', version=VERSION,
                   description='Offline academic BENIGN/DDoS classifier. No live traffic monitoring.',
                   lifespan=lifespan,
                   responses={500: {'model': ErrorResponse}})
     app.add_middleware(CORSMiddleware, allow_origins=list(settings.cors_origins),
-                       allow_credentials=False, allow_methods=['GET', 'POST'],
+                       allow_credentials=False, allow_methods=['GET', 'POST', 'DELETE'],
                        allow_headers=['Content-Type'])
+
+    @app.exception_handler(AnalysisError)
+    async def analysis_error(request, exc):
+        return error_response(exc.status, exc.code, exc.message)
 
     @app.exception_handler(ModelUnavailable)
     async def unavailable(request, exc):
@@ -168,6 +186,7 @@ def create_app(settings: Settings | None = None):
             return error_response(422, 'invalid_features', str(exc))
         return PredictResponse(predictions=predictions.to_dict(orient='records'), **notes)
 
+    app.include_router(router(artifact_for, ErrorResponse))
     return app
 
 

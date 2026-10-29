@@ -2,19 +2,21 @@
   import './layout.css';
   import type { LayoutProps } from './$types';
   let { children }: LayoutProps = $props();
-  const planned = ['Traffic Analysis', 'Flow Explorer', 'Explainable AI', 'Model Insights'];
+  const planned = ['Explainable AI', 'Model Insights'];
 </script>
 
 <svelte:head>
   <meta name="description" content="Explainable Network IDS — offline academic flow classification." />
 </svelte:head>
 
+<a href="#main" class="sr-only focus:not-sr-only">Skip to content</a>
 <div class="min-h-screen lg:grid lg:grid-cols-[240px_1fr]">
   <aside class="border-b border-border bg-card p-6 lg:border-r lg:border-b-0">
     <a href="/" class="block font-mono text-sm font-semibold tracking-tight">EN / IDS <span class="text-primary">↗</span></a>
     <p class="mt-2 text-xs text-muted-foreground">Explainable network intelligence</p>
     <nav aria-label="Main navigation" class="mt-10 space-y-2">
-      <a href="/" aria-current="page" class="block rounded-md bg-accent px-3 py-2 text-sm font-medium">Dashboard</a>
+      <a href="/"  class="block rounded-md bg-accent px-3 py-2 text-sm font-medium">Dashboard</a>
+      <a href="/analyze" class="block px-3 py-2 text-sm">Traffic Analysis</a>
       {#each planned as name}
         <span class="flex justify-between gap-2 px-3 py-2 text-sm text-muted-foreground">
           {name}<span class="font-mono text-[10px] uppercase leading-5">planned</span>

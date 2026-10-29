@@ -140,3 +140,13 @@
 }
 body { font-family: 'Trebuchet MS', sans-serif; }
 a:focus-visible { outline: 2px solid var(--ring); outline-offset: 4px; }
+
+@layer components {
+  .eyebrow { @apply mb-3 font-mono text-xs uppercase tracking-[0.2em] text-primary; }
+  .page-title { @apply text-3xl font-semibold tracking-tight sm:text-4xl; }
+  .console-button { @apply rounded-md border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40; }
+  .console-button.primary { @apply border-primary bg-primary text-primary-foreground hover:bg-primary/90; }
+  .control-label { @apply flex flex-col gap-2 text-xs text-muted-foreground; }
+  .control-label input, .control-label select { @apply w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground; }
+  .error-box { @apply rounded-lg border border-destructive/50 bg-card p-4 text-sm; }
+}

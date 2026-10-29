@@ -10,6 +10,7 @@
     "serve": { "command": "pnpm --filter web dev" },
     "build": { "command": "pnpm --filter web build", "cache": true, "inputs": ["default", "^default"], "outputs": ["{projectRoot}/build", "{projectRoot}/.svelte-kit"] },
     "check": { "command": "pnpm --filter web check", "cache": true, "inputs": ["default", "^default"] },
-    "test": { "command": "pnpm --filter web test", "cache": true, "inputs": ["default", "^default"] }
+    "test": { "command": "pnpm --filter web test", "cache": true, "inputs": ["default", "^default"] },
+    "e2e": { "command": "pnpm --filter web exec playwright test", "cache": false }
   }
 }
