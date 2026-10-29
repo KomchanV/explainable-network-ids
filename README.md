@@ -5,6 +5,10 @@ BENIGN (0) or DDoS (1), evaluate a Random Forest on labeled held-out data, and
 explain its predictions with SHAP. Runs locally with Streamlit; no packet capture,
 live monitoring, database, or external inference service.
 
+**Release status:** `0.1.0-alpha.1` (alpha). The training, batch inference,
+evaluation, SHAP explanation, and local dashboard workflows are implemented and
+tested, but the project is an academic prototype and is not production-ready.
+
 Inspired by *E-XAI: Evaluating Black-Box Explainable AI Frameworks for Network
 Intrusion Detection*, IEEE Access (2024),
 [DOI 10.1109/ACCESS.2024.3365140](https://doi.org/10.1109/ACCESS.2024.3365140).
@@ -177,6 +181,8 @@ models/                 local trained bundle and reports (ignored)
 reports/figures/        generated plots (ignored)
 docs/implementation-plan.md
 requirements.txt
+CHANGELOG.md
+RELEASE_NOTES.md
 ```
 
 ## Limitations and academic use
