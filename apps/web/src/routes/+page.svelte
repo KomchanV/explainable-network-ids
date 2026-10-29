@@ -1,10 +1,12 @@
 <script lang="ts">
+  import AnalysisSummary from '#lib/components/AnalysisSummary.svelte';
   import { onMount } from 'svelte';
   import { PUBLIC_API_BASE_URL } from '$app/env/public';
   import type { components } from '@ids/api-client';
   import { ApiError, createApi } from '#lib/api.js';
   import { Button } from '#lib/components/ui/button/index.js';
 
+  let current = $state<components['schemas']['AnalysisSummary'] | null>(null);
   let health = $state<components['schemas']['HealthResponse'] | null>(null);
   let model = $state<components['schemas']['ModelResponse'] | null>(null);
   let loading = $state(true);
@@ -20,6 +22,10 @@
     try {
       const api = createApi(PUBLIC_API_BASE_URL);
       health = await api.health();
+      try {
+        const id = localStorage.getItem('ids-current-analysis');
+        if (id) current = await api.analysis(id);
+      } catch { current = null; }
       if (health.model_available) {
         try { model = await api.model(); }
         catch (cause) { modelError = cause instanceof ApiError ? cause.message : 'Could not load model metadata.'; }
@@ -83,6 +89,11 @@
       </section>
     {/if}
   {/if}
+</div>
+
+<div class="mt-8 space-y-6">
+  <a href="/analyze" class="console-button primary inline-block">Start traffic analysis</a>
+  {#if current}<h2 class="text-xl font-semibold">Current analysis</h2><AnalysisSummary summary={current} /><a href={`/analyses/${current.id}`} class="console-button inline-block">Open Flow Explorer</a>{/if}
 </div>
 
 <footer class="mt-10 border-t border-border pt-5 text-xs leading-5 text-muted-foreground">

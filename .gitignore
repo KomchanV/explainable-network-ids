@@ -32,3 +32,7 @@ coverage/
 playwright-report/
 test-results/
 .pnpm-store/
+
+# Browser test output
+apps/web/test-results/
+apps/web/playwright-report/

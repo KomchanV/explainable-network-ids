@@ -1,0 +1,68 @@
+import { expect, test } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
+
+test('real CSV inference, summary, pagination, filtering, detail and export', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByText('● Connected')).toBeVisible();
+  await page.getByRole('link', { name: 'Start traffic analysis' }).click();
+  await expect(page.getByText('API connected · Trusted model available')).toBeVisible();
+  await page.getByLabel('Drop a flow CSV').setInputFiles('test-results/flows.csv');
+  await page.getByRole('button', { name: 'Analyze CSV', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Analysis complete' })).toBeVisible();
+  await page.getByRole('link', { name: 'Open Flow Explorer' }).click();
+  await expect(page.getByRole('heading', { name: 'Flow Explorer', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Inspect row 1', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Inspect row 1', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Flow 1 details' })).toBeVisible();
+  await page.getByLabel('Rows per page').selectOption('10');
+  await expect(page.getByText('Page 1 of 4')).toBeVisible();
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Inspect row 11', exact: true })).toBeVisible();
+  await page.getByLabel('Find row number').fill('999999');
+  await page.getByRole('button', { name: 'Apply filters' }).click();
+  await expect(page.getByText('No flows match these filters.')).toBeVisible();
+  await page.getByLabel('Find row number').fill('3');
+  await page.getByRole('button', { name: 'Apply filters' }).click();
+  await expect(page.getByText('1 matching flows')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Inspect row 3', exact: true })).toBeVisible();
+  const downloadEvent = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export all predictions' }).click();
+  const download = await downloadEvent;
+  const csv = await readFile((await download.path())!, 'utf8');
+  expect(csv.split('\n')[0]).toBe('row_number,prediction,ddos_probability');
+  expect(csv.trim().split('\n')).toHaveLength(41);
+  await page.getByRole('button', { name: 'Delete analysis', exact: true }).click();
+  await expect(page.getByText('Analysis deleted. Temporary flow data has been removed.')).toBeVisible();
+});
+
+test('selection errors, busy state and schema failure', async ({ page }) => {
+  await page.goto('/analyze');
+  await expect(page.getByText('API connected · Trusted model available')).toBeVisible();
+  await page.getByLabel('Drop a flow CSV').setInputFiles({ name: 'empty.csv', mimeType: 'text/csv', buffer: Buffer.from('') });
+  await expect(page.getByRole('alert')).toHaveText('The selected file is empty.');
+  await expect(page.getByRole('button', { name: 'Analyze CSV', exact: true })).toBeDisabled();
+  await page.getByLabel('Drop a flow CSV').setInputFiles({ name: 'bad.csv', mimeType: 'text/csv', buffer: Buffer.from('x\n1') });
+  let release: () => void = () => {};
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  await page.route('**/api/v1/analyses?*', async route => { await gate; await route.continue(); });
+  await page.getByRole('button', { name: 'Analyze CSV', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Uploading and analyzing…' })).toBeDisabled();
+  release();
+  await expect(page.getByRole('alert')).toContainText('Missing required feature columns');
+});
+
+test('model unavailable, disconnected and expired states', async ({ page }) => {
+  await page.route('**/health', route => route.fulfill({ json: { status: 'ok', model_available: false, version: 'test' } }));
+  await page.goto('/analyze');
+  await expect(page.getByText('Model unavailable.', { exact: false })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Analyze CSV', exact: true })).toBeDisabled();
+  await page.route('**/health', route => route.abort());
+  await page.getByRole('button', { name: 'Check connection' }).click();
+  await expect(page.getByText('Cannot reach the API.', { exact: false })).toBeVisible();
+  await page.goto('/analyses/nonexistent');
+  await expect(page.getByRole('alert')).toContainText('Analysis not found');
+  await expect(page.getByRole('link', { name: 'Upload a CSV again' })).toBeVisible();
+  await page.route('**/api/v1/analyses/expired', route => route.fulfill({ status: 410, json: { error: { code: 'analysis_expired', message: 'Analysis expired. Upload the CSV again.' } } }));
+  await page.goto('/analyses/expired');
+  await expect(page.getByRole('alert')).toContainText('Analysis expired.');
+});
