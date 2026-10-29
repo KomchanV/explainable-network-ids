@@ -33,7 +33,10 @@ pnpm dev
 
 Open <http://127.0.0.1:5173> for the web dashboard and
 <http://127.0.0.1:8000/docs> for FastAPI. The dashboard reads actual service health
-and saved model metadata. Both services start without a dataset or model;
+and saved model metadata. Use **Traffic Analysis** to upload a CSV, run real batch
+inference, explore paginated predictions, inspect feature values, and export results.
+See the [CSV usage and API guide](docs/traffic-analysis.md) for requirements and
+local session limits. Both services start without a dataset or model;
 model-dependent requests return a clear 503 until a trusted artifact is configured.
 No model training is part of installation, development startup, or build.
 
@@ -44,6 +47,7 @@ pnpm test                     # Python engine, API, frontend tests
 pnpm check                    # Python checks, schema drift, Svelte/TypeScript
 pnpm build                    # SvelteKit Node build
 pnpm contract:generate        # FastAPI -> OpenAPI -> TypeScript
+pnpm nx e2e web               # Chromium workflow (install browser first; see development docs)
 pnpm graph                    # Nx dependency graph
 pnpm nx run ids-core:compatibility  # trusted model CLI + SHAP checks (if available)
 ```
@@ -75,7 +79,8 @@ model paths are accepted; models cannot be uploaded through the API.
 Configuration, Nx targets, schema generation, and clean-clone setup are explained
 in [development workflow](docs/development.md). See [architecture](docs/architecture.md)
 for boundaries and caching decisions, and [migration verification](docs/migration-v0.2.md)
-for measured compatibility results and remaining work.
+for measured compatibility results. The [Traffic Analysis verification record](docs/traffic-analysis-verification.md)
+lists changed files, tests and remaining limits for this milestone.
 
 ## Existing Python and scientific workflows
 

@@ -31,7 +31,8 @@ Python workflows have no Node dependency. API dependencies are an additive
 | `pnpm dev` | Nx starts API and web concurrently; Ctrl-C stops both |
 | `pnpm dev:web` / `pnpm nx serve web` | SvelteKit development server, strict port 5173 |
 | `pnpm dev:api` / `pnpm nx serve api` | FastAPI reload server, loopback port 8000 |
-| `pnpm test` | Existing Python tests, API tests, frontend client unit tests |
+| `pnpm test` | Existing Python tests, API analysis integration tests, frontend client unit tests |
+| `pnpm nx e2e web` | Isolated Chromium upload/inference/explore/export and error-state tests |
 | `pnpm check` | Python compile checks and OpenAPI/type drift checks; Svelte diagnostics |
 | `pnpm build` | SvelteKit production build with Node adapter |
 | `pnpm nx run-many -t check,test,build --output-style=static` | Full verification |
@@ -107,3 +108,25 @@ alter global user settings. Request the narrow required execution permission.
 
 The full CI workflow runs on PRs/pushes with Python 3.13 and Node 22. It installs
 with the pnpm lockfile and verifies all four projects without external datasets.
+
+
+## CSV analysis and browser verification
+
+Follow [CSV Traffic Analysis](traffic-analysis.md) for accepted input, endpoints,
+export and session lifecycle. Run one API worker; sessions are process-local and
+have no authentication. Keep the API on loopback. `PUBLIC_API_BASE_URL` remains
+the shared frontend URL configuration. Uploads use raw `text/csv`, not multipart.
+
+```bash
+pnpm --filter web exec playwright install chromium
+pnpm nx e2e web --output-style=static
+# Linux CI also installs browser system packages:
+pnpm --filter web exec playwright install --with-deps chromium
+```
+
+The uncached Nx E2E target starts isolated servers on 8001 and 5174 and creates a
+small synthetic model in an OS temporary directory. It writes a generated CSV to
+ignored `apps/web/test-results/flows.csv`; it never trains/overwrites `models/`.
+Stop other processes using those test ports first. Traces are retained on failure.
+CI runs E2E separately after unit checks/build and uploads failure artifacts.
+`pnpm test` remains the fast engine/API/client suite; E2E is explicit.
