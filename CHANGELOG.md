@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — v0.2.0-alpha.1 foundation
+
+- Nx integrated pnpm workspace with web, API, generated contract, and Python engine projects.
+- SvelteKit/Svelte 5 dashboard with live API health/model metadata, Tailwind, and shadcn-svelte.
+- FastAPI adapter with model-independent health, metadata, bounded batch inference,
+  consistent errors, local CORS, and trusted server-only artifact configuration.
+- OpenAPI export, generated TypeScript types, schema drift checks, API/client tests,
+  CI workflow, and architecture/development/compatibility documentation.
+- Read-only CLI/pipeline/SHAP artifact compatibility verification.
+
+### Compatibility
+
+- Preserve `src` import paths, scientific dependency pins, fitted pipelines,
+  existing CLIs, Streamlit, experimental evidence, and v0.1 release history.
+- No model retraining or release tag is part of the migration.
+
 ## [0.1.0-alpha.1] - 2026-10-30
 
 ### Added
