@@ -22,3 +22,13 @@ reports/*
 !data/processed/.gitkeep
 !models/.gitkeep
 !reports/.gitkeep
+
+# Monorepo tooling and frontend outputs
+node_modules/
+.nx/
+.svelte-kit/
+apps/web/build/
+coverage/
+playwright-report/
+test-results/
+.pnpm-store/
