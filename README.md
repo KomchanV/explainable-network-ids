@@ -6,7 +6,7 @@ explain its predictions with SHAP. Version 0.2 adds an Nx workspace, a SvelteKit
 adapter. The original Streamlit workflow remains available. No packet capture,
 live monitoring, database, or external inference service is included.
 
-**Development version:** `0.2.0-alpha.1`. The existing `0.1.0-alpha.1` release and
+**Development version:** `0.2.0-alpha.1`. See the [v0.2 alpha release notes](RELEASE_NOTES_v0.2.0-alpha.1.md) and [changelog](CHANGELOG.md) for release scope and limitations. The existing `0.1.0-alpha.1` release and
 its scientific implementation are preserved. The training, batch inference,
 evaluation, SHAP explanation, and local dashboard workflows are implemented and
 tested, but the project is an academic prototype and is not production-ready.

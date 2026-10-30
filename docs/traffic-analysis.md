@@ -106,8 +106,9 @@ process kill may leave OS temporary files; operators must remove abandoned
 The quotas apply to the running process, not crash leftovers or multiple workers.
 
 No background inference queue, persistent database, authentication, live packet
-capture, continuous monitoring, blocking, model upload/training, or HTTP SHAP is
-implemented. Large requests can take minutes and no calibrated-probability or
+capture, continuous monitoring, blocking, or model upload/training is implemented.
+Local and sampled global HTTP SHAP explanations are available on demand; they are
+separately bounded, compute-intensive, and do not provide live monitoring. Large requests can take minutes and no calibrated-probability or
 new scientific performance claims are made.
 
 ## Investigating a prediction with SHAP
