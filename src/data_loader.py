@@ -77,7 +77,8 @@ def read_csv(source, *, max_rows=None):
                 if '\x00' in block:
                     raise ValueError('Invalid CSV: NUL bytes are not allowed.')
             stream.seek(0)
-            header = next(csv.reader(stream, strict=True), None)
+            records = csv.reader(stream, strict=True)
+            header = next(records, None)
             if not header:
                 raise ValueError('CSV is empty or has no header.')
             header = [c.strip().lstrip('\ufeff') for c in header]
@@ -87,10 +88,18 @@ def read_csv(source, *, max_rows=None):
             if len(repeated) == 2:
                 header[repeated[1]] = 'Fwd Header Length.1'
             normalize_columns(pd.DataFrame(columns=header))
+            # The C parser can silently discard extra fields in the first row
+            # of a later chunk, even with on_bad_lines='error' and warnings
+            # promoted to errors. Check record widths independently first.
+            # csv.reader retains one record at a time and applies the same
+            # standard-library field-size limit used by API preflight.
+            for record in records:
+                if len(record) > len(header):
+                    raise ValueError('Invalid CSV: row contains more fields than the header.')
             stream.seek(0)
             with warnings.catch_warnings():
-                # index_col=False prevents implicit index inference on overlong rows;
-                # its ParserWarning is an error, so no extra fields are discarded.
+                # Prevent implicit index inference; record widths were checked
+                # above, and any remaining parser warnings are errors.
                 warnings.simplefilter('error', pd.errors.ParserWarning)
                 chunks = []
                 total = 0

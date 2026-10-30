@@ -1,0 +1,263 @@
+{
+  "kind": "synthetic software baseline; not detection accuracy or capacity certification",
+  "environment": {
+    "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "python": "3.13.13",
+    "logical_cpus": 8,
+    "packages": {
+      "numpy": "2.2.6",
+      "pandas": "2.2.3",
+      "scikit-learn": "1.6.1",
+      "shap": "0.48.0",
+      "fastapi": "0.121.0",
+      "httpx": "0.28.1"
+    },
+    "command": [
+      "/Users/komchanv/Local Documents/xai/.venv/bin/python",
+      "-m",
+      "scripts.benchmark_traffic",
+      "--rows",
+      "1000",
+      "10000",
+      "50000",
+      "--repeats",
+      "3",
+      "--output",
+      "docs/performance/traffic-baseline-2026-10-30.json"
+    ],
+    "revision": "c4d7b5797eab70f0379eb33ec0cd1f75b58aa46b",
+    "working_tree_dirty": true,
+    "thread_environment": {
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "MKL_NUM_THREADS": null
+    }
+  },
+  "model": {
+    "provenance": "synthetic",
+    "training_input_rows": 400,
+    "seed": 42,
+    "n_estimators": 100,
+    "max_depth": 12,
+    "n_jobs": -1
+  },
+  "measurement": {
+    "timed": "store.create including preflight; HTTP in-process queries, local/global SHAP, export",
+    "excluded": "startup imports, model fitting/loading, input generation, HTTP upload, export verification, deletion",
+    "cold_start": "first local SHAP includes lazy SHAP imports/JIT; each case uses a fresh process",
+    "python_peak": "tracemalloc during timed stages; includes tracing overhead in elapsed time",
+    "rss_peak": "OS process lifetime high-water RSS, includes imports and model loading; not a delta",
+    "storage": "completed analysis files only; excludes input CSV, model and in-memory predictions/offsets",
+    "throughput": "rows / ingestion seconds; total_seconds also includes result access"
+  },
+  "cases": [
+    {
+      "rows": 1000,
+      "feature_count": 6,
+      "input_bytes": 49200,
+      "storage_bytes": 149245,
+      "export_bytes": 14365,
+      "export_rows": 1000,
+      "export_sha256": "dc6444f0ff10d136e1acdffaafff79250090a63bfc6e1757cc8d196d7e6f5509",
+      "total_seconds": 18.670010834001005,
+      "stage_seconds": {
+        "ingestion": 0.15002558400010457,
+        "queries": 0.017834582999057602,
+        "local_shap": 18.3912291250017,
+        "global_shap": 0.09655170900077792,
+        "export": 0.01434687500295695
+      },
+      "rows_per_second": 6665.529793900372,
+      "python_peak_bytes": 41723118,
+      "process_peak_rss_before_bytes": 203161600,
+      "process_peak_rss_bytes": 247742464,
+      "max_shap_reconstruction_error": 9.992007221626409e-16,
+      "repeat": 1
+    },
+    {
+      "rows": 1000,
+      "feature_count": 6,
+      "input_bytes": 49200,
+      "storage_bytes": 149245,
+      "export_bytes": 14365,
+      "export_rows": 1000,
+      "export_sha256": "dc6444f0ff10d136e1acdffaafff79250090a63bfc6e1757cc8d196d7e6f5509",
+      "total_seconds": 19.25670729199919,
+      "stage_seconds": {
+        "ingestion": 0.14801729200553382,
+        "queries": 0.017695167000056244,
+        "local_shap": 18.984422749999794,
+        "global_shap": 0.09220158400421496,
+        "export": 0.014348416996654123
+      },
+      "rows_per_second": 6755.967403880174,
+      "python_peak_bytes": 41719881,
+      "process_peak_rss_before_bytes": 211288064,
+      "process_peak_rss_bytes": 229277696,
+      "max_shap_reconstruction_error": 9.992007221626409e-16,
+      "repeat": 2
+    },
+    {
+      "rows": 1000,
+      "feature_count": 6,
+      "input_bytes": 49200,
+      "storage_bytes": 149245,
+      "export_bytes": 14365,
+      "export_rows": 1000,
+      "export_sha256": "dc6444f0ff10d136e1acdffaafff79250090a63bfc6e1757cc8d196d7e6f5509",
+      "total_seconds": 19.035627416000352,
+      "stage_seconds": {
+        "ingestion": 0.15236916599678807,
+        "queries": 0.020845125000050757,
+        "local_shap": 18.758986624998215,
+        "global_shap": 0.08948704099748284,
+        "export": 0.01391341700218618
+      },
+      "rows_per_second": 6563.007636473379,
+      "python_peak_bytes": 41719711,
+      "process_peak_rss_before_bytes": 199196672,
+      "process_peak_rss_bytes": 221659136,
+      "max_shap_reconstruction_error": 9.992007221626409e-16,
+      "repeat": 3
+    },
+    {
+      "rows": 10000,
+      "feature_count": 6,
+      "input_bytes": 491890,
+      "storage_bytes": 1493286,
+      "export_bytes": 153105,
+      "export_rows": 10000,
+      "export_sha256": "1196034a11a1fbc986bf5b0d189d1f07a5a7de5502d4ba74b7c60b093409f517",
+      "total_seconds": 19.852960999996867,
+      "stage_seconds": {
+        "ingestion": 0.6827251669965335,
+        "queries": 0.020764875000168104,
+        "local_shap": 18.931594875000883,
+        "global_shap": 0.1179012499997043,
+        "export": 0.09994958299648715
+      },
+      "rows_per_second": 14647.182326663482,
+      "python_peak_bytes": 44254176,
+      "process_peak_rss_before_bytes": 211189760,
+      "process_peak_rss_bytes": 236306432,
+      "max_shap_reconstruction_error": 9.43689570931383e-16,
+      "repeat": 1
+    },
+    {
+      "rows": 10000,
+      "feature_count": 6,
+      "input_bytes": 491890,
+      "storage_bytes": 1493286,
+      "export_bytes": 153105,
+      "export_rows": 10000,
+      "export_sha256": "1196034a11a1fbc986bf5b0d189d1f07a5a7de5502d4ba74b7c60b093409f517",
+      "total_seconds": 21.502405375002127,
+      "stage_seconds": {
+        "ingestion": 0.7047441659960896,
+        "queries": 0.020179166000161786,
+        "local_shap": 20.57390487500379,
+        "global_shap": 0.10492725000221981,
+        "export": 0.09862570899713319
+      },
+      "rows_per_second": 14189.546338231748,
+      "python_peak_bytes": 44252502,
+      "process_peak_rss_before_bytes": 210993152,
+      "process_peak_rss_bytes": 246202368,
+      "max_shap_reconstruction_error": 9.43689570931383e-16,
+      "repeat": 2
+    },
+    {
+      "rows": 10000,
+      "feature_count": 6,
+      "input_bytes": 491890,
+      "storage_bytes": 1493286,
+      "export_bytes": 153105,
+      "export_rows": 10000,
+      "export_sha256": "1196034a11a1fbc986bf5b0d189d1f07a5a7de5502d4ba74b7c60b093409f517",
+      "total_seconds": 19.17022087499936,
+      "stage_seconds": {
+        "ingestion": 0.7111483339976985,
+        "queries": 0.018910457998572383,
+        "local_shap": 18.224551041996165,
+        "global_shap": 0.11552004200348165,
+        "export": 0.1000655839961837
+      },
+      "rows_per_second": 14061.7639414063,
+      "python_peak_bytes": 44252666,
+      "process_peak_rss_before_bytes": 208519168,
+      "process_peak_rss_bytes": 237731840,
+      "max_shap_reconstruction_error": 9.43689570931383e-16,
+      "repeat": 3
+    },
+    {
+      "rows": 50000,
+      "feature_count": 6,
+      "input_bytes": 2459187,
+      "storage_bytes": 7466594,
+      "export_bytes": 809702,
+      "export_rows": 50000,
+      "export_sha256": "c84670c8932dd7ae37050c9ac588ef8ca8eaa21c5d742679b75bc83a0afb58dc",
+      "total_seconds": 24.830602249996446,
+      "stage_seconds": {
+        "ingestion": 3.27744545799942,
+        "queries": 0.024792125004751142,
+        "local_shap": 20.89378704199771,
+        "global_shap": 0.13976404200366233,
+        "export": 0.49478950000047917
+      },
+      "rows_per_second": 15255.78400640126,
+      "python_peak_bytes": 54195765,
+      "process_peak_rss_before_bytes": 209469440,
+      "process_peak_rss_bytes": 247775232,
+      "max_shap_reconstruction_error": 9.43689570931383e-16,
+      "repeat": 1
+    },
+    {
+      "rows": 50000,
+      "feature_count": 6,
+      "input_bytes": 2459187,
+      "storage_bytes": 7466594,
+      "export_bytes": 809702,
+      "export_rows": 50000,
+      "export_sha256": "c84670c8932dd7ae37050c9ac588ef8ca8eaa21c5d742679b75bc83a0afb58dc",
+      "total_seconds": 23.666006583996932,
+      "stage_seconds": {
+        "ingestion": 4.313890333993186,
+        "queries": 0.04201749999629101,
+        "local_shap": 18.7079356250033,
+        "global_shap": 0.12273991599795409,
+        "export": 0.4793989999961923
+      },
+      "rows_per_second": 11590.466175276439,
+      "python_peak_bytes": 54196130,
+      "process_peak_rss_before_bytes": 202719232,
+      "process_peak_rss_bytes": 239599616,
+      "max_shap_reconstruction_error": 9.43689570931383e-16,
+      "repeat": 2
+    },
+    {
+      "rows": 50000,
+      "feature_count": 6,
+      "input_bytes": 2459187,
+      "storage_bytes": 7466594,
+      "export_bytes": 809702,
+      "export_rows": 50000,
+      "export_sha256": "c84670c8932dd7ae37050c9ac588ef8ca8eaa21c5d742679b75bc83a0afb58dc",
+      "total_seconds": 22.03265591699892,
+      "stage_seconds": {
+        "ingestion": 3.1587880000006407,
+        "queries": 0.023818624998966698,
+        "local_shap": 18.243259540999134,
+        "global_shap": 0.12286466699879384,
+        "export": 0.4839030420043855
+      },
+      "rows_per_second": 15828.85587763087,
+      "python_peak_bytes": 54198482,
+      "process_peak_rss_before_bytes": 198688768,
+      "process_peak_rss_bytes": 262406144,
+      "max_shap_reconstruction_error": 9.43689570931383e-16,
+      "repeat": 3
+    }
+  ]
+}

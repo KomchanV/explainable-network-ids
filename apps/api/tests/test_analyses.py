@@ -390,3 +390,86 @@ def test_small_global_sample_and_deleted_session(client, bundle):
     assert client.get(path).status_code == 404
     assert client.get(f'/api/v1/analyses/{id}/flows/1/explanation').status_code == 404
     assert not list(client.app.state.analyses.root.iterdir())
+
+
+@pytest.mark.parametrize('batch_size', [1, 2, 7])
+def test_partitioned_inference_scientific_baseline(bundle, batch_size):
+    """Oracle for future streaming integration; never refit the saved imputer."""
+    artifact = bundle[1]
+    frame = artifact['explanation_sample'].iloc[:6].copy()
+    frame.iloc[0, 0] = np.nan
+    frame.iloc[2, 1] = np.inf
+    frame = pd.concat([frame, frame.iloc[[0, 3]]], ignore_index=True)
+    frame['Source IP'] = 'ignored synthetic metadata'
+    statistics = artifact['pipeline'].named_steps['imputer'].statistics_.copy()
+    expected, expected_notes = predict_batch(artifact, frame)
+    batches, imputed = [], 0
+    for start in range(0, len(frame), batch_size):
+        predictions, notes = predict_batch(artifact, frame.iloc[start:start + batch_size])
+        assert predictions.row_number.tolist() == list(range(1, len(predictions) + 1))
+        predictions.row_number += start
+        batches.append(predictions)
+        imputed += notes['imputed_cells']
+        assert notes['ignored_columns'] == expected_notes['ignored_columns']
+    actual = pd.concat(batches, ignore_index=True)
+    pd.testing.assert_frame_equal(actual, expected, check_exact=True)
+    assert imputed == expected_notes['imputed_cells']
+    np.testing.assert_array_equal(statistics, artifact['pipeline'].named_steps['imputer'].statistics_)
+
+
+def test_probability_ties_and_inclusive_boundaries(client, bundle):
+    frame = pd.concat([bundle[1]['explanation_sample'].iloc[:1]] * 7, ignore_index=True)
+    expected, _ = predict_batch(bundle[1], frame)
+    id = upload(client, frame).json()['id']
+    base = f'/api/v1/analyses/{id}'
+    probability = float(expected.ddos_probability.iloc[0])
+    for direction in ('asc', 'desc'):
+        rows = []
+        for page in (1, 2, 3):
+            response = client.get(base + '/flows', params={
+                'probability_min': probability, 'probability_max': probability,
+                'sort': 'probability', 'direction': direction, 'page_size': 3, 'page': page})
+            assert response.status_code == 200
+            assert response.json()['total'] == 7
+            rows.extend(response.json()['items'])
+        assert [row['row_number'] for row in rows] == list(range(1, 8))
+        assert all(row['ddos_probability'] == probability for row in rows)
+    exported = pd.read_csv(io.StringIO(client.get(base + '/export').text))
+    pd.testing.assert_frame_equal(exported, expected, check_exact=False, atol=1e-12)
+
+
+def test_inference_failure_is_atomic_and_releases_ingestion(client, bundle, monkeypatch):
+    frame = bundle[1]['explanation_sample'].iloc[:2]
+    with monkeypatch.context() as patch:
+        def fail(*args, **kwargs):
+            raise ValueError('synthetic failure containing sensitive-input-marker')
+        patch.setattr('src.predict.predict_batch', fail)
+        response = upload(client, frame)
+    assert response.status_code == 422
+    assert 'sensitive-input-marker' not in response.text
+    assert not client.app.state.analyses.sessions
+    assert not list(client.app.state.analyses.root.iterdir())
+    assert upload(client, frame).status_code == 201
+
+
+def test_synthetic_lifecycle_benchmark(bundle, tmp_path):
+    from scripts.benchmark_traffic import run_case
+    result = run_case(bundle[0], rows=9, directory=tmp_path)
+    assert result['rows'] == 9
+    assert result['export_rows'] == 9
+    assert result['storage_bytes'] > 0
+    assert result['input_bytes'] > 0
+    assert result['python_peak_bytes'] > 0
+    assert result['process_peak_rss_bytes'] >= result['process_peak_rss_before_bytes']
+    assert result['rows_per_second'] > 0
+    assert result['max_shap_reconstruction_error'] < 1e-5
+    assert set(result['stage_seconds']) == {'ingestion', 'queries', 'local_shap', 'global_shap', 'export'}
+    assert not list(tmp_path.iterdir())
+
+
+@pytest.mark.parametrize('rows', [0, -1, 50001])
+def test_benchmark_rejects_invalid_sizes_before_model_loading(tmp_path, rows):
+    from scripts.benchmark_traffic import run_case
+    with pytest.raises(ValueError, match='rows'):
+        run_case(tmp_path / 'not-a-model', rows=rows, directory=tmp_path)
+    assert not list(tmp_path.iterdir())

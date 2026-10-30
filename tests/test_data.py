@@ -89,3 +89,38 @@ def test_pandas_suffixed_target_and_identifier_copies_cannot_leak_into_features(
     X, _, info = load_training_data(source)
     assert X.columns.tolist() == ['Flow Duration']
     assert {'Label.1', 'Source IP.1', 'Destination Port.1'} <= set(info['excluded_columns'])
+
+
+def test_csv_parser_chunk_boundary_preserves_order_and_duplicate_flows():
+    # Two narrow columns keep this regular CI fixture small (<500 KiB).
+    source = StringIO(' value,Label\n' + '1,BENIGN\n' * 50000 + '2,DDoS\n1,BENIGN\n')
+    frame = read_csv(source)
+    assert frame.columns.tolist() == ['value', 'Label']
+    assert len(frame) == 50002
+    assert frame.value.iloc[[0, 49999, 50000, 50001]].tolist() == [1, 1, 2, 1]
+    assert frame.Label.iloc[50000] == 'DDoS'
+    assert frame.index.tolist() == list(range(50002))
+
+
+def test_late_malformed_record_and_row_limit_never_return_a_partial_frame():
+    prefix = 'x,y\n' + '1,2\n' * 50000
+    with pytest.raises(ValueError, match='Invalid CSV'):
+        read_csv(StringIO(prefix + '3,4,5\n'))
+    with pytest.raises(ValueError, match='50,000 row limit'):
+        read_csv(StringIO(prefix + '3,4\n'), max_rows=50000)
+
+
+def test_record_validation_preserves_quoted_fields_short_rows_and_large_cells():
+    # Commas/newlines inside quoted cells are not record separators. Short rows
+    # retain pandas' missing-cell behavior; no content is normalized in the scan.
+    source = StringIO('x,metadata\n1,"comma, and\nnewline"\n2\n3,' + 'v' * 100000 + '\n')
+    frame = read_csv(source)
+    assert frame.metadata.iloc[0] == 'comma, and\nnewline'
+    assert pd.isna(frame.metadata.iloc[1])
+    assert frame.metadata.iloc[2] == 'v' * 100000
+
+
+def test_oversized_csv_field_is_rejected_explicitly():
+    import csv
+    with pytest.raises(ValueError, match='Invalid CSV'):
+        read_csv(StringIO('x,metadata\n1,' + 'v' * (csv.field_size_limit() + 1) + '\n'))
