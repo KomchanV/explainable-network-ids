@@ -18,6 +18,10 @@ This is a simplified course implementation, **not a reproduction of the paper's
 experiments, methodology, or results**. The IEEE page required a JavaScript/robot
 check during development; no claim is made to have reviewed its full text.
 
+## Documentation and maintenance
+
+Start with the [documentation index](docs/README.md) for current architecture, development, usage guides, historical research evidence, and release verification. See [CONTRIBUTING.md](CONTRIBUTING.md) for PR and test conventions, [SECURITY.md](SECURITY.md) for the local-only security boundary, and [repository maintenance](docs/repository-maintenance.md) for branch and release policies.
+
 ## Monorepo quick start (v0.2)
 
 Use **Node 22.17+**, **pnpm 11.4.0**, and **Python 3.11–3.13**. Run from the root:
@@ -206,8 +210,8 @@ One output row per input row, including duplicates, preserves original row order
 Outputs contain `row_number` (1-based data row), `prediction`, and
 `ddos_probability`. Prediction CSVs are exported without the uploaded raw fields.
 
-The dashboard caps uploads at 50,000 rows and 200 MB, previews up to 1,000 results,
-and downloads all accepted rows. The CLI has no upload row cap. Files are parsed
+The web interface caps uploads at 50,000 rows and 200 MiB and shows paginated results,
+while export downloads all accepted predictions. The CLI has no upload row cap. Files are parsed
 locally and are not submitted to an external service.
 
 ## SHAP interpretation
@@ -229,8 +233,8 @@ an explanation with a mislabeled scale.
 - The feature-value table shows the model's numeric values after imputation.
   Correlated flow features can redistribute attribution. Explanations describe the
   fitted model, not proof of an attack. First SHAP import can take a few seconds.
-- Global and local explanations run on demand. Model resources and repeated global
-  computations are cached; raw upload predictions are session-local.
+- Global and local explanations run on demand, with one SHAP calculation at a time
+  and no explanation cache. Raw upload predictions are session-local.
 
 ## Repository
 
