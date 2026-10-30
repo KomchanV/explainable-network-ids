@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 
 test('real CSV inference, summary, pagination, filtering, detail and export', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByText('● Connected')).toBeVisible();
+  await expect(page.getByText('Connected', { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Start traffic analysis' }).click();
   await expect(page.getByText('API connected · Trusted model available')).toBeVisible();
   await page.getByLabel('Drop a flow CSV').setInputFiles('test-results/flows.csv');

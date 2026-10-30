@@ -17,8 +17,8 @@
     finally { loading = false; }
   }
 </script>
-<section aria-label="Global explainability" aria-busy={loading} class="my-8 rounded-lg border border-border bg-card p-6">
-  <h2 class="mt-2 text-xl font-semibold">Global Explainability</h2>
+<section aria-label="Global explainability" aria-busy={loading} class="my-8 border-t border-border pt-7">
+  <h2 class="text-xl font-semibold">Global Explainability</h2>
   <p class="my-3 max-w-3xl text-sm text-muted-foreground">Rank features by mean absolute SHAP contribution to P(DDoS) in a deterministic sample of this uploaded analysis. This describes the sampled model outputs, not an entire network or population. It does not show causal effects or contribution direction.</p>
   <form class="my-4 flex flex-wrap items-end gap-4" onsubmit={event => { event.preventDefault(); void generate(); }}>
     <label class="control-label">Sample size (1–100)<input type="number" min="1" max="100" step="1" required bind:value={sampleSize} disabled={loading} /></label>
@@ -29,7 +29,9 @@
   {#if result}
     <p class="my-3 text-sm">Sampled flows: <strong data-testid="sample-count">{result.sample_size}</strong> · Seed {result.sampling_seed}</p>
     <p class="text-xs text-muted-foreground">{result.sampling_method}</p>
-    <div class="mt-5 overflow-x-auto"><table aria-label="Global feature importance" class="w-full text-left text-sm"><thead><tr><th class="p-3">Rank / Feature</th><th class="p-3">Mean absolute SHAP (probability units)</th></tr></thead><tbody>
+    <!-- Keyboard focus enables native arrow-key scrolling of narrow tables. -->
+    <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+    <div role="region" aria-label="Global feature importance, horizontally scrollable" tabindex="0" class="mt-5 overflow-x-auto"><table aria-label="Global feature importance" class="w-full text-left text-sm"><thead><tr><th scope="col" class="p-3">Rank / Feature</th><th scope="col" class="p-3">Mean absolute SHAP (probability units)</th></tr></thead><tbody>
       {#each result.feature_importance as feature, index}
         <tr class="border-t border-border"><th scope="row" class="max-w-72 break-words p-3 font-normal">{index + 1}. {feature.feature}</th><td class="p-3"><span class="font-mono">{formatNumber(feature.mean_abs_shap)}</span><div aria-hidden="true" class="mt-2 h-2 bg-muted"><div class="h-2 bg-primary" style:width={`${result.feature_importance[0]?.mean_abs_shap ? 100 * feature.mean_abs_shap / result.feature_importance[0].mean_abs_shap : 0}%`}></div></div></td></tr>
       {/each}

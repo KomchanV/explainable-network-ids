@@ -20,9 +20,9 @@
     return () => { active = false; };
   });
 </script>
-<section aria-labelledby="uploaded-importance" class="mt-10 border-t border-border pt-7">
+<section aria-labelledby="uploaded-importance" class="mt-7">
   <h2 id="uploaded-importance" class="text-xl font-semibold">Uploaded dataset feature importance</h2>
-  <p class="page-intro">Global SHAP here summarizes a sample of your current uploaded dataset. It is separate from the saved held-out evaluation above and is not a training-wide importance measure.</p>
+  <p class="page-intro">Global SHAP here summarizes a sample of your current uploaded dataset. It is separate from the saved held-out evaluation below and is not a training-wide importance measure.</p>
   {#if loading}<p role="status" class="mt-4 text-sm">Looking for a current analysis…</p>
   {:else if error}<p role="alert" class="error-box mt-4">{error} Import a CSV again if the temporary analysis has expired.</p><a class="console-button mt-4" href="/analyze">Import dataset</a>
   {:else if analysis}<p class="mt-4 break-words text-sm">Current dataset: <strong>{analysis.dataset_filename}</strong> · {analysis.total_flows.toLocaleString()} flows</p><a class="mt-2 inline-block text-sm text-primary underline" href={`/analyses/${encodeURIComponent(analysis.id)}`}>Investigate this analysis</a><GlobalShapExplanation analysisId={analysis.id} {api} />

@@ -5,7 +5,6 @@
   import type { components } from '@ids/api-client';
   import { createApi } from '#lib/api.js';
   import { formatMetric, metricDefinitions } from '#lib/evaluation.js';
-  import { Button } from '#lib/components/ui/button/index.js';
 
   let data = $state<components['schemas']['ModelEvaluationResponse'] | null>(null);
   let loading = $state(true);
@@ -26,12 +25,14 @@
 </script>
 
 <svelte:head><title>Model Insights · Explainable Network IDS</title></svelte:head>
-<div class="flex flex-wrap items-start justify-between gap-4">
+<div class="page-header">
   <div><h1 class="page-title">Model Insights</h1>
     <p class="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Saved held-out evaluation of the loaded Random Forest. These results describe labeled test data, independently of any current uploaded analysis.</p></div>
-  <Button class="min-h-11" variant="outline" onclick={refresh} disabled={loading}>Refresh evaluation</Button>
+  <button class="console-button" onclick={refresh} disabled={loading}>Refresh evaluation</button>
 </div>
-<div class="mt-8 space-y-8" aria-live="polite" aria-busy={loading}>
+<nav class="section-links mt-6" aria-label="Model insight sections"><a href="#uploaded-explanation">Uploaded-data explanations</a><a href="#saved-evaluation">Saved evaluation</a><a href="#provenance">Provenance</a><a href="#limits">Limitations</a></nav>
+<div id="uploaded-explanation"><CurrentAnalysisExplanation /></div>
+<div id="saved-evaluation" class="mt-8 space-y-8" aria-busy={loading}>
   {#if loading}<p role="status">Loading saved evaluation…</p>
   {:else if error}<div role="alert" class="rounded-lg border border-destructive/40 p-5"><h2 class="font-semibold">Evaluation unavailable</h2><p class="mt-2 text-sm">{error}</p></div>
   {:else if data}
@@ -54,7 +55,8 @@
     </section>
     <section aria-labelledby="matrix"><h2 id="matrix" class="text-xl font-semibold">Confusion Matrix</h2>
       <p class="mt-2 text-sm text-muted-foreground">Rows are actual labels; columns are predicted labels. Saved scikit-learn order: [BENIGN (0), DDoS (1)].</p>
-      <div class="mt-4 overflow-x-auto"><table class="w-full border-collapse text-left text-sm">
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex: keyboard access to a horizontally scrolling data table -->
+      <div class="mt-4 table-scroll" role="region" aria-label="Confusion matrix table" tabindex="0"><table class="w-full border-collapse text-left text-sm">
         <caption class="pb-3 text-left text-muted-foreground">Actual counts on the held-out test set</caption>
         <thead><tr><th class="border border-border p-3" scope="col">Actual / Predicted</th><th class="border border-border p-3" scope="col">Predicted BENIGN</th><th class="border border-border p-3" scope="col">Predicted DDoS</th></tr></thead>
         <tbody>{#each ['BENIGN', 'DDoS'] as label, row}<tr><th class="border border-border p-3" scope="row">Actual {label}</th>
@@ -84,5 +86,3 @@
     <section aria-labelledby="limits" class="border-t border-border pt-6"><h2 id="limits" class="text-xl font-semibold">Scientific Limitations</h2><ul class="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-muted-foreground">{#each data.limitations as limitation}<li>{limitation}</li>{/each}</ul></section>
   {/if}
 </div>
-
-<CurrentAnalysisExplanation />

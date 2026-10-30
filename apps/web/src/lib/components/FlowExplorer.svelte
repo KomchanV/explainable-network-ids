@@ -106,30 +106,37 @@
 {#if deleted}
   <p role="status">Analysis deleted. Temporary flow data has been removed.</p>
 {:else}
-  {#if summary}<AnalysisSummary {summary} />{/if}
+  {#if summary}<AnalysisSummary {summary} compact />{/if}
   {#if error}<div role="alert" class="error-box my-6"><p>{error}</p>{#if expired}<a href="/analyze" class="underline">Upload a CSV again</a>{:else}<button class="console-button mt-3" onclick={() => load(currentPage)}>Retry</button>{/if}</div>{/if}
   {#if !expired}
-    <form class="my-7 grid gap-4 rounded-lg border border-border bg-card p-5 sm:grid-cols-3 xl:grid-cols-6" onsubmit={(event) => { event.preventDefault(); void load(1); }}>
+    <form class="flow-filters my-6" onsubmit={(event) => { event.preventDefault(); void load(1); }}>
+      <fieldset class="filter-fields"><legend>Filter predictions</legend>
       <label class="control-label">Prediction<select bind:value={prediction} disabled={loading}><option value="">All predictions</option><option>BENIGN</option><option>DDoS</option></select></label>
-      <label class="control-label">Min P(DDoS)<input type="number" min="0" max="1" step="0.01" required bind:value={min} disabled={loading} /></label>
-      <label class="control-label">Max P(DDoS)<input type="number" min="0" max="1" step="0.01" required bind:value={max} disabled={loading} /></label>
+      <label class="control-label">Min P(DDoS)<input type="number" min="0" max="1" step="0.01" required aria-invalid={!!filterError} aria-describedby={filterError ? "probability-filter-error" : undefined} bind:value={min} disabled={loading} /></label>
+      <label class="control-label">Max P(DDoS)<input type="number" min="0" max="1" step="0.01" required aria-invalid={!!filterError} aria-describedby={filterError ? "probability-filter-error" : undefined} bind:value={max} disabled={loading} /></label>
       <label class="control-label">Find row number<input type="number" min="1" step="1" bind:value={row} placeholder="All rows" disabled={loading} /></label>
+      </fieldset>
+      <fieldset class="filter-fields ordering"><legend>Order results</legend>
       <label class="control-label">Sort by<select bind:value={sort} disabled={loading}><option value="row_number">Row number</option><option value="probability">P(DDoS)</option></select></label>
       <label class="control-label">Direction<select bind:value={direction} disabled={loading}><option value="asc">Ascending</option><option value="desc">Descending</option></select></label>
-      <button class="console-button primary" disabled={loading}>Apply filters</button>
-      <button type="button" class="console-button" disabled={loading} onclick={clearFilters}>Clear filters</button>
       <label class="control-label">Rows per page<select bind:value={pageSize} disabled={loading} onchange={(event) => { pageSize = Number(event.currentTarget.value); void load(1); }}><option value={10}>10</option><option value={25}>25</option><option value={50}>50</option><option value={100}>100</option></select></label>
+      </fieldset>
+      <div class="filter-actions"><button class="console-button primary" disabled={loading}>Apply filters</button>
+      <button type="button" class="console-button" disabled={loading} onclick={clearFilters}>Clear filters</button>
+      <p class="text-xs leading-5 text-muted-foreground">P(DDoS) is an uncalibrated model output, not threat severity.</p></div>
     </form>
-    {#if filterError}<p role="alert" class="error-box mb-4">{filterError}</p>{/if}
+    {#if filterError}<p id="probability-filter-error" role="alert" class="error-box mb-4">{filterError}</p>{/if}
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3"><p class="text-sm text-muted-foreground">{result ? `${result.total.toLocaleString()} matching flows` : 'Prediction results'}</p><div class="flex flex-wrap gap-3"><button class="console-button" onclick={download} disabled={exporting || !summary}>{exporting ? 'Exporting…' : 'Export all predictions'}</button><button class="console-button" onclick={() => { confirmDelete = true; }} disabled={deleting || !summary}>{deleting ? 'Deleting…' : 'Delete analysis'}</button></div></div>
-    {#if confirmDelete}<section aria-label="Confirm analysis deletion" class="panel mb-4"><h2 class="font-semibold">Delete this temporary analysis?</h2><p class="my-3 text-sm text-muted-foreground">Stored flows, predictions and explanations will become unavailable. Export predictions first if needed.</p><div class="flex flex-wrap gap-3"><button class="console-button" onclick={() => { confirmDelete = false; }} disabled={deleting}>Cancel deletion</button><button class="console-button primary" onclick={remove} disabled={deleting}>{deleting ? 'Deleting…' : 'Confirm deletion'}</button></div></section>{/if}
+    {#if confirmDelete}<section aria-label="Confirm analysis deletion" class="panel mb-4"><h2 class="font-semibold">Delete this temporary analysis?</h2><p class="my-3 text-sm text-muted-foreground">Stored flows, predictions and explanations will become unavailable. Export predictions first if needed.</p><div class="flex flex-wrap gap-3"><button class="console-button" onclick={() => { confirmDelete = false; }} disabled={deleting}>Cancel deletion</button><button class="console-button destructive" onclick={remove} disabled={deleting}>{deleting ? 'Deleting…' : 'Confirm deletion'}</button></div></section>{/if}
     {#if actionError}<p role="alert" class="error-box mb-4">{actionError}</p>{/if}
-    <section aria-label="Flow predictions" aria-busy={loading} class="overflow-x-auto rounded-lg border border-border">
+    <!-- Keyboard focus enables native arrow-key scrolling of narrow tables. -->
+    <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+    <section tabindex="0" aria-label="Flow predictions, horizontally scrollable" aria-busy={loading} class="overflow-x-auto rounded-lg border border-border">
       <table class="w-full text-left text-sm"><caption class="sr-only">Flow predictions. P(DDoS) is an uncalibrated model probability.</caption><thead class="bg-card text-xs text-muted-foreground"><tr><th scope="col" class="p-4">Row number</th><th scope="col" class="p-4">Prediction</th><th scope="col" class="p-4">P(DDoS)</th><th scope="col" class="p-4">Details</th></tr></thead><tbody>
         {#if loading}<tr><td colspan="4" class="p-6"><span role="status">Loading analysis results…</span></td></tr>
         {:else if result && result.items.length}
           {#each result.items as flow (flow.row_number)}<tr class="border-t border-border hover:bg-accent/40"><td class="p-4 font-mono">{flow.row_number}</td><td class="p-4"><span class="badge" class:danger={flow.prediction === 'DDoS'} class:benign={flow.prediction === 'BENIGN'}>{flow.prediction}</span></td><td class="p-4 font-mono">{flow.ddos_probability.toFixed(4)}</td><td class="p-3"><button class="console-button" aria-label={`Inspect row ${flow.row_number}`} onclick={() => selectRow(flow.row_number)}>Inspect</button></td></tr>{/each}
-        {:else}<tr><td colspan="4" class="p-6 text-muted-foreground">{error ? 'Results unavailable.' : 'No flows match these filters.'}</td></tr>{/if}
+        {:else}<tr><td colspan="4" class="p-6 text-muted-foreground">{error ? 'Results unavailable.' : 'No flows match these filters.'}{#if !error}<p class="mt-3"><button type="button" class="console-button" onclick={clearFilters}>Reset filters to show all flows</button></p>{/if}</td></tr>{/if}
       </tbody></table>
     </section>
     <nav aria-label="Results pagination" class="my-5 flex items-center justify-between gap-4"><button class="console-button" disabled={loading || currentPage <= 1} onclick={() => load(currentPage - 1)}>Previous</button><span class="text-xs">Page {currentPage} of {Math.max(1, Math.ceil((result?.total ?? 0) / pageSize))}</span><button class="console-button" disabled={loading || !result || currentPage * pageSize >= result.total} onclick={() => load(currentPage + 1)}>Next</button></nav>
@@ -150,3 +157,18 @@
     <GlobalShapExplanation analysisId={analysisId} {api} />
   {/if}
 {/if}
+
+<style>
+  .flow-filters { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 3fr); gap: 1.5rem; padding: 1.25rem; background: var(--card); border: 1px solid var(--border); border-radius: .75rem; }
+  .filter-fields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; min-width: 0; }
+  .filter-fields legend { padding-bottom: 1rem; font-size: .8125rem; font-weight: 600; }
+  .ordering { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .filter-actions { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: .75rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+  .filter-actions p { margin-left: auto; max-width: 40ch; }
+  @media (max-width: 1200px) { .flow-filters { grid-template-columns: 1fr; } }
+  @media (max-width: 600px) {
+    .flow-filters { padding: 1rem; gap: 1rem; }
+    .filter-fields, .ordering { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .filter-actions p { margin-left: 0; max-width: none; width: 100%; }
+  }
+</style>

@@ -29,7 +29,7 @@ test('uploaded flows have real local reconstruction and sampled global importanc
   await expect(page.getByRole('heading', { name: 'Flow 2 details' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Local SHAP explanation', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Explain Prediction', exact: true }).click();
-  await expect(page.getByText('Local / Flow 2', {exact: true})).toBeVisible();
+  await expect(page.getByText('SHAP explanation for flow 2', {exact: true})).toBeVisible();
   await page.getByRole('region', {name: 'Local SHAP explanation', exact: true}).screenshot({path: 'test-results/shap-local-desktop.png'});
   await page.setViewportSize({width: 390, height: 844});
   await expect(page.getByRole('region', {name: 'SHAP waterfall', exact: true})).toBeVisible();
@@ -71,12 +71,12 @@ test('late responses cannot overwrite a newly selected flow', async ({ page }) =
   await page.getByRole('button', { name: 'Close flow details' }).click();
   await page.getByRole('button', { name: 'Inspect row 2', exact: true }).click();
   await page.getByRole('button', { name: 'Explain Prediction', exact: true }).click();
-  await expect(page.getByText('Local / Flow 2', {exact: true})).toBeVisible();
+  await expect(page.getByText('SHAP explanation for flow 2', {exact: true})).toBeVisible();
   const lateResponse = page.waitForResponse(r => r.url().endsWith('/flows/1/explanation'));
   release();
   await (await lateResponse).finished();
-  await expect(page.getByText('Local / Flow 1', {exact: true})).toHaveCount(0);
-  await expect(page.getByText('Local / Flow 2', {exact: true})).toBeVisible();
+  await expect(page.getByText('SHAP explanation for flow 1', {exact: true})).toHaveCount(0);
+  await expect(page.getByText('SHAP explanation for flow 2', {exact: true})).toBeVisible();
   if (await page.getByRole('button', { name: 'Close flow details' }).isVisible()) await page.getByRole('button', { name: 'Close flow details' }).click();
   await page.getByRole('button', {name: 'Delete analysis', exact: true}).click();
   await page.getByRole('button', { name: 'Confirm deletion', exact: true }).click();
@@ -110,7 +110,7 @@ test('client-side navigation between analyses resets selected flow and global ex
   const first = page.url();
   await page.getByRole('button', {name: 'Inspect row 1', exact: true}).click();
   await page.getByRole('button', {name: 'Explain Prediction', exact: true}).click();
-  await expect(page.getByText('Local / Flow 1', {exact: true})).toBeVisible();
+  await expect(page.getByText('SHAP explanation for flow 1', {exact: true})).toBeVisible();
   await page.getByRole('button', { name: 'Close flow details' }).click();
   await page.getByRole('button', {name: 'Generate Global Explanation', exact: true}).click();
   await expect(page.getByRole('table', {name: 'Global feature importance'})).toBeVisible();

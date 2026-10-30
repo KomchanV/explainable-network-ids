@@ -4,8 +4,8 @@ test('navigation reflects route, theme persists, mobile menu is keyboard operabl
   await page.goto('/');
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
   await expect(nav.locator('[aria-current="page"]')).toHaveText('Overview');
-  await nav.getByRole('link', { name: 'Analyses', exact: true }).click();
-  await expect(nav.locator('[aria-current="page"]')).toHaveText('Analyses');
+  await nav.getByRole('link', { name: 'Import & analyze', exact: true }).click();
+  await expect(nav.locator('[aria-current="page"]')).toHaveText('Import & analyze');
   await page.getByLabel('Theme', { exact: true }).selectOption('dark');
   await expect(page.locator('html')).toHaveClass('dark');
   await page.reload();
@@ -43,6 +43,10 @@ test('flow drawer preserves filters, closes with Escape and restores focus', asy
   await expect(trigger).toBeFocused();
   await expect(page.getByLabel('Find row number')).toHaveValue('3');
   await expect(page.getByText('1 matching flows')).toBeVisible();
+  await page.getByLabel('Find row number').fill('999999');
+  await page.getByRole('button', { name: 'Apply filters' }).click();
+  await page.getByRole('button', { name: 'Reset filters to show all flows' }).click();
+  await expect(page.getByText('40 matching flows')).toBeVisible();
   await page.getByLabel('Min P(DDoS)').fill('0.9');
   await page.getByLabel('Max P(DDoS)').fill('0.1');
   await page.getByRole('button', { name: 'Apply filters' }).click();
@@ -69,7 +73,7 @@ test('overview current analysis, schema guidance, model SHAP and responsive them
   await expect(page.getByRole('heading', { name: 'Prediction distribution' })).toBeVisible();
   for (const theme of ['light', 'dark']) {
     await page.getByLabel('Theme', { exact: true }).selectOption(theme);
-    await page.screenshot({ path: `../../docs/screenshots/v0.3-overview-${theme}.png`, fullPage: true });
+    await page.screenshot({ path: `../../docs/ui-redesign/after-overview-${theme}.png`, fullPage: true });
   }
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Model Insights', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Uploaded dataset feature importance' })).toBeVisible();
@@ -77,12 +81,19 @@ test('overview current analysis, schema guidance, model SHAP and responsive them
   await page.getByRole('button', { name: 'Generate Global Explanation', exact: true }).click();
   await expect(page.getByTestId('sample-count')).toHaveText('9');
   await expect(page.getByRole('heading', { name: 'Saved Held-out Evaluation' })).toBeVisible();
-  await page.screenshot({ path: '../../docs/screenshots/v0.3-model-insights-dark.png', fullPage: true });
+  await page.screenshot({ path: '../../docs/ui-redesign/after-model-insights-dark.png', fullPage: true });
   await page.getByRole('link', { name: 'Investigate this analysis' }).click();
+  await expect(page.getByRole('heading', { name: 'Flow Explorer', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Inspect row 1', exact: true })).toBeVisible();
+  await page.screenshot({ path: '../../docs/ui-redesign/after-explorer-desktop-dark.png' });
+  await page.setViewportSize({ width: 768, height: 1024 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  await page.screenshot({ path: '../../docs/ui-redesign/after-explorer-tablet-dark.png' });
+  await page.setViewportSize({ width: 1280, height: 720 });
   await page.getByRole('button', { name: 'Inspect row 1', exact: true }).click();
   await page.getByRole('button', { name: 'Explain Prediction', exact: true }).click();
   await expect(page.getByTestId('stored-probability')).toBeVisible();
-  await page.screenshot({ path: '../../docs/screenshots/v0.3-explorer-drawer-dark.png' });
+  await page.screenshot({ path: '../../docs/ui-redesign/after-explorer-drawer-dark.png' });
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator('dialog:modal')).toBeVisible();
   await page.getByRole('button', { name: 'Close flow details' }).focus();
@@ -92,19 +103,25 @@ test('overview current analysis, schema guidance, model SHAP and responsive them
     expect(await page.evaluate(() => document.activeElement === document.body || Boolean(document.activeElement?.closest('dialog')))).toBeTruthy();
   }
   await page.getByRole('dialog', { name: 'Flow details' }).evaluate(el => { el.scrollTop = 0; });
-  await page.screenshot({ path: '../../docs/screenshots/v0.3-drawer-mobile-dark.png' });
+  await page.screenshot({ path: '../../docs/ui-redesign/after-drawer-mobile-dark.png' });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   await page.getByRole('button', { name: 'Close flow details' }).click();
   await page.goto('/analyze');
   await expect(page.getByText('API connected · Trusted model available')).toBeVisible();
   await page.getByLabel('Theme', { exact: true }).selectOption('light');
-  await page.screenshot({ path: '../../docs/screenshots/v0.3-import-mobile-light.png', fullPage: true });
+  await page.screenshot({ path: '../../docs/ui-redesign/after-import-mobile-light.png', fullPage: true });
   await page.goto('/');
   await page.getByRole('link', { name: 'Open Flow Explorer' }).click();
   await page.getByRole('button', { name: 'Delete analysis', exact: true }).click();
   await page.getByRole('button', { name: 'Confirm deletion', exact: true }).click();
+  await expect(page.getByText('Analysis deleted. Temporary flow data has been removed.')).toBeVisible();
+  await page.evaluate(() => localStorage.removeItem('ids-current-analysis'));
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Start with a saved flow dataset' })).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await page.screenshot({ path: '../../docs/ui-redesign/after-first-use-mobile-light.png', fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.screenshot({ path: '../../docs/ui-redesign/after-first-use-desktop-light.png', fullPage: true });
   await page.evaluate(() => localStorage.setItem('ids-current-analysis', 'expired-ui-test'));
   await page.goto('/');
   await expect(page.getByRole('alert')).toContainText('Your previous analysis has expired or was removed.');
