@@ -36,6 +36,7 @@ export function createApi(baseUrl: string, fetcher: typeof fetch = fetch) {
 
   const analysisPath = (id: string) => `/api/v1/analyses/${encodeURIComponent(id)}`;
   return {
+    evaluation: () => request<components['schemas']['ModelEvaluationResponse']>('/model/evaluation'),
     health: () => request<Health>('/health'), model: () => request<Model>('/model'),
     analyze: (file: File) => request<components['schemas']['AnalysisSummary']>(
       `/api/v1/analyses?filename=${encodeURIComponent(file.name)}`,
