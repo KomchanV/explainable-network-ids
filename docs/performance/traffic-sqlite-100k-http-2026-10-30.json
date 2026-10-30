@@ -1,0 +1,83 @@
+{
+  "kind": "synthetic software baseline; not detection accuracy or capacity certification",
+  "environment": {
+    "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "python": "3.13.13",
+    "logical_cpus": 8,
+    "packages": {
+      "numpy": "2.2.6",
+      "pandas": "2.2.3",
+      "scikit-learn": "1.6.1",
+      "shap": "0.48.0",
+      "fastapi": "0.121.0",
+      "httpx": "0.28.1"
+    },
+    "command": [
+      "/Users/komchanv/Local Documents/xai/.venv/bin/python",
+      "-m",
+      "scripts.benchmark_traffic",
+      "--rows",
+      "100000",
+      "--http-upload",
+      "--output",
+      "docs/performance/traffic-sqlite-100k-http-2026-10-30.json"
+    ],
+    "revision": "961dfa01c2ddf7781c93fa74343205c1ebde332a",
+    "working_tree_dirty": true,
+    "thread_environment": {
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "MKL_NUM_THREADS": null
+    }
+  },
+  "model": {
+    "provenance": "synthetic",
+    "training_input_rows": 400,
+    "seed": 42,
+    "n_estimators": 100,
+    "max_depth": 12,
+    "n_jobs": -1
+  },
+  "measurement": {
+    "timed": "store.create including preflight; HTTP in-process queries, local/global SHAP, export",
+    "excluded": "startup imports, model fitting/loading, input generation, export verification, deletion; HTTP upload excluded unless requested",
+    "cold_start": "first local SHAP includes lazy SHAP imports/JIT; each case uses a fresh process",
+    "python_peak": "tracemalloc during timed stages; includes tracing overhead in elapsed time",
+    "rss_peak": "OS process lifetime high-water RSS, includes imports and model loading; not a delta",
+    "storage": "completed SQLite files; upload bytes also reserved by service quota; benchmark export file outside server quota",
+    "transport": "TestClient buffers uploads/responses; bounded-export uses server lease directly and writes a client file incrementally",
+    "throughput": "rows / ingestion seconds; total_seconds also includes result access"
+  },
+  "cases": [
+    {
+      "rows": 100000,
+      "feature_count": 6,
+      "input_bytes": 4918420,
+      "storage_bytes": 11939840,
+      "export_bytes": 1630463,
+      "export_rows": 100000,
+      "prediction_rows_verified": 100000,
+      "export_sha256": "d24dd684c3c50f67c4ad743c15ebf854d97f7a971b7cdfb1428ab549736f3eb8",
+      "http_upload": true,
+      "bounded_export": false,
+      "ingestion_python_peak_bytes": 10622131,
+      "ingestion_process_peak_rss_bytes": 225492992,
+      "export_additional_python_peak_bytes": 3521801,
+      "total_seconds": 26.042853749997448,
+      "stage_seconds": {
+        "ingestion": 6.374510207999265,
+        "queries": 0.01613858299970161,
+        "local_shap": 18.873936875002983,
+        "global_shap": 0.12615620799624594,
+        "export": 0.652085249996162
+      },
+      "rows_per_second": 15687.47978072287,
+      "python_peak_bytes": 49054940,
+      "process_peak_rss_before_bytes": 211812352,
+      "process_peak_rss_bytes": 225492992,
+      "max_shap_reconstruction_error": 8.881784197001252e-16,
+      "repeat": 1
+    }
+  ]
+}

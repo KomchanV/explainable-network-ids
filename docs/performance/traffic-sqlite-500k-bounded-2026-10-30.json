@@ -1,0 +1,83 @@
+{
+  "kind": "synthetic software baseline; not detection accuracy or capacity certification",
+  "environment": {
+    "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "python": "3.13.13",
+    "logical_cpus": 8,
+    "packages": {
+      "numpy": "2.2.6",
+      "pandas": "2.2.3",
+      "scikit-learn": "1.6.1",
+      "shap": "0.48.0",
+      "fastapi": "0.121.0",
+      "httpx": "0.28.1"
+    },
+    "command": [
+      "/Users/komchanv/Local Documents/xai/.venv/bin/python",
+      "-m",
+      "scripts.benchmark_traffic",
+      "--rows",
+      "500000",
+      "--bounded-export",
+      "--output",
+      "docs/performance/traffic-sqlite-500k-bounded-2026-10-30.json"
+    ],
+    "revision": "961dfa01c2ddf7781c93fa74343205c1ebde332a",
+    "working_tree_dirty": true,
+    "thread_environment": {
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "MKL_NUM_THREADS": null
+    }
+  },
+  "model": {
+    "provenance": "synthetic",
+    "training_input_rows": 400,
+    "seed": 42,
+    "n_estimators": 100,
+    "max_depth": 12,
+    "n_jobs": -1
+  },
+  "measurement": {
+    "timed": "store.create including preflight; HTTP in-process queries, local/global SHAP, export",
+    "excluded": "startup imports, model fitting/loading, input generation, export verification, deletion; HTTP upload excluded unless requested",
+    "cold_start": "first local SHAP includes lazy SHAP imports/JIT; each case uses a fresh process",
+    "python_peak": "tracemalloc during timed stages; includes tracing overhead in elapsed time",
+    "rss_peak": "OS process lifetime high-water RSS, includes imports and model loading; not a delta",
+    "storage": "completed SQLite files; upload bytes also reserved by service quota; benchmark export file outside server quota",
+    "transport": "TestClient buffers uploads/responses; bounded-export uses server lease directly and writes a client file incrementally",
+    "throughput": "rows / ingestion seconds; total_seconds also includes result access"
+  },
+  "cases": [
+    {
+      "rows": 500000,
+      "feature_count": 6,
+      "input_bytes": 24591667,
+      "storage_bytes": 60211200,
+      "export_bytes": 8596541,
+      "export_rows": 500000,
+      "prediction_rows_verified": 500000,
+      "export_sha256": "2e6b1be415fd353dd43b0877d70f46624d6ba11ed5f81646267e7847cb2a4a43",
+      "http_upload": false,
+      "bounded_export": true,
+      "ingestion_python_peak_bytes": 5823085,
+      "ingestion_process_peak_rss_bytes": 211238912,
+      "export_additional_python_peak_bytes": 418757,
+      "total_seconds": 57.38633591699909,
+      "stage_seconds": {
+        "ingestion": 30.350979542003188,
+        "queries": 2.072177832997113,
+        "local_shap": 21.452224957996805,
+        "global_shap": 0.1398784999983036,
+        "export": 3.371026458000415
+      },
+      "rows_per_second": 16473.93288602242,
+      "python_peak_bytes": 47703939,
+      "process_peak_rss_before_bytes": 208666624,
+      "process_peak_rss_bytes": 211238912,
+      "max_shap_reconstruction_error": 8.326672684688674e-16,
+      "repeat": 1
+    }
+  ]
+}

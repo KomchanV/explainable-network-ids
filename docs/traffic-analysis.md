@@ -12,8 +12,8 @@ browser local storage; CSV values and results are not stored there.
 Use offline CIC-IDS2017 flow CSVs with comma separators, a single-line header,
 and UTF-8 or UTF-8-BOM encoding. `GET /model` lists every required feature; names
 must match the trained schema after surrounding whitespace/BOM normalization.
-Maximum upload: **200 MiB (209,715,200 bytes)**, **50,000 data rows**, **256 columns**,
-and **5,000,000 cells** (data rows × header columns, including ignored columns).
+Maximum upload: **200 MiB (209,715,200 bytes)**, **100,000 data rows**, **256 columns**,
+and **25,600,000 cells** (data rows × header columns, including ignored columns).
 Headers are limited to 64 Ki characters and physical data lines to 1 Mi characters.
 An upload must finish within five minutes. These additional shape/deadline bounds
 protect the local parser; remove unused extra columns or use the original CLI for
@@ -29,7 +29,8 @@ a flow with every required value missing is rejected. Exactly two original
 Other duplicate/ambiguous headers are rejected. Extra columns, including labels
 and identifiers, are ignored and listed in the summary. Input ordering and
 identical flow rows are preserved. Row numbers are one-based data-row ordinals,
-not physical file line numbers. No ground-truth evaluation is performed.
+not physical file line numbers. Inference processes at most 10,000 rows per batch by default,
+using the same frozen model and globally sequential row numbers. No ground-truth evaluation is performed.
 
 ## Exploring and exporting
 
@@ -51,7 +52,9 @@ timestamps, labels and other metadata are never retained in detail files.
 independent of active filters/page/sort. CSV columns are `row_number`,
 `prediction`, `ddos_probability`. Export excludes raw inputs, metadata and supplied
 labels. It does not rerun inference. **Delete analysis** immediately removes its
-results and feature-detail file; re-upload is required to recover them.
+results from API access; re-upload is required to recover them. An already active
+export may finish from its retained read lease; its SQLite file is deleted when
+the last export closes (including disconnect/error/timeout).
 
 ## API reference
 
@@ -80,7 +83,7 @@ curl 'http://127.0.0.1:8000/api/v1/analyses/ID/flows?page_size=10&prediction=DDo
 curl 'http://127.0.0.1:8000/api/v1/analyses/ID/export' -o predictions.csv
 ```
 
-Status codes: 404 unknown/deleted/missing flow; 408 upload deadline; 410 recently
+Status codes: 404 unknown/deleted/missing flow; 408 upload/processing deadline; 410 recently
 expired session; 413 byte limit; 415 unsupported media type; 422 invalid CSV,
 shape/row limits or query; 503 missing model, busy ingestion, session/storage full.
 Capacity errors require retry after processing ends, deletion, or expiration.
@@ -92,18 +95,70 @@ Keep both servers bound to loopback. CORS is not authentication and unpredictabl
 IDs do not provide user isolation on a public deployment. Anyone holding an ID
 can read, export or delete that analysis. Do not expose this API publicly.
 
-Each process uses a private OS temporary directory. At most five analyses retain
-up to 250,000 predictions/offsets in memory, with at most 512 MiB total feature
-JSONL files on disk. Only one upload/inference runs per process; its temporary
-raw input adds at most 200 MiB disk. Shape/row/byte limits bound parser and
-inference intermediates; their memory footprint depends on CSV types/content.
-Results expire one hour after creation, without extension on access. Cleanup
-runs every 60 seconds and on session access/creation. Recent 128 expired IDs
-return 410; older or restart-lost IDs return 404. Graceful shutdown deletes the
-whole process directory. Results are not recoverable after restart. An abrupt
-process kill may leave OS temporary files; operators must remove abandoned
-`ids-analyses-*` directories after stopping the API or rely on OS temp cleanup.
-The quotas apply to the running process, not crash leftovers or multiple workers.
+Each process uses a private OS temporary directory. At most five completed analyses
+retain summaries and schema names in memory; predictions and required numeric
+feature arrays reside in SQLite, with no per-row offsets or prediction DataFrame.
+Only one upload/inference runs per process. Failed staging databases are never
+published and are removed with their journals. Pagination/filter/count/order use
+SQL; detail and deterministic SHAP samples fetch at most 100 feature rows. SQLite
+page caches are 2 MiB per connection and memory mapping is disabled. Matching
+probability indexes and row-key scans avoid full-result in-memory or temporary
+sorts. Large page offsets and filtered counts still require scanning index entries.
+
+The **512 MiB aggregate temporary-disk budget now includes uploads, databases,
+rollback journals and files retained by active exports**. Before writes,
+`max_page_count` reserves a conservative three times the maximum new database
+pages plus 64 KiB for journal/header overhead, after accounting for existing
+files/upload bytes. This can reject an ingestion even when final file sizes would
+fit; the reserve prioritizes bounded transient storage. It is a logical quota,
+not an OS filesystem quota: unrelated filesystem usage/metadata or abandoned
+previous-process directories are not covered. OS write/full errors fail safely.
+
+Exports fetch 1,000 predictions at a time and preserve original order. At most two
+exports are active per process, with a five-minute total response deadline.
+Deletion/expiry immediately makes an analysis unavailable to new requests while
+an active export retains its file and quota. Disconnection/error closes the lease;
+an export timeout aborts the response rather than returning a successful partial
+CSV. The existing browser download API still buffers its downloaded Blob; server
+streaming does not guarantee bounded browser/client memory.
+
+Results expire one hour after creation without extension on access. Cleanup runs
+every 60 seconds and on access/creation. Recent 128 expired IDs return 410; older
+or restart-lost IDs return 404. Graceful shutdown closes leases and removes the
+process directory. An abrupt process kill may leave OS temporary files; operators
+must remove abandoned `ids-analyses-*` directories after stopping the API or rely
+on OS cleanup. Quotas apply per running process, not across multiple workers.
+
+Finite operator configuration is available through environment variables (restart
+required). The UI displays the defaults, not custom server configuration:
+
+| Variable prefix `IDS_ANALYSIS_` | Default |
+| --- | ---: |
+| `MAX_UPLOAD_BYTES` | 209715200 (200 MiB) |
+| `BATCH_ROWS` | 10000 (positive; maximum 100000) |
+| `MAX_ROWS` | 100000 |
+| `MAX_COLUMNS` | 256 |
+| `MAX_CELLS` | 25600000 |
+| `MAX_SESSIONS` | 5 |
+| `MAX_DISK_BYTES` | 536870912 (512 MiB) |
+| `TTL` | 3600 seconds |
+| `UPLOAD_TIMEOUT` | 300 seconds |
+| `PROCESSING_TIMEOUT` | 600 seconds |
+| `MAX_EXPORTS` | 2 |
+| `EXPORT_TIMEOUT` | 300 seconds |
+
+All values must be positive integers. Upload/response deadlines cover their whole
+stages; processing checks are cooperative between scans/batches and after model
+calls, not a forced interruption of native inference. Resource use also includes
+the trusted model, one/two parsing batches and bounded explanation samples. CSV
+shape/contents, model width and configured batch size affect actual memory; these
+limits are not a universal RAM guarantee. Python csv's existing field-size limit
+(default 131,072 characters) and header/physical-line bounds still apply. The CLI
+`read_csv` compatibility function intentionally returns a full DataFrame; only
+analysis ingestion uses the streaming iterator.
+
+See [scalability verification and measurements](performance/scalable-traffic.md)
+for tested dataset sizes, methodology and limitations.
 
 No background inference queue, persistent database, authentication, live packet
 capture, continuous monitoring, blocking, or model upload/training is implemented.
@@ -159,7 +214,7 @@ is an offline academic prototype.
 
 One SHAP request runs at a time in the local single-worker process. Another
 request receives 503 `explanation_busy`; wait and retry. Requests never explain
-more than 100 flows and never automatically explain all 50,000 uploaded rows.
+more than 100 flows and never automatically explain all uploaded rows.
 The browser allows five minutes for bounded explanation requests. A timeout or
 leaving the view does **not** necessarily cancel Python computation. There is no
 explanation cache; each click computes again. Existing session TTL/deletion and

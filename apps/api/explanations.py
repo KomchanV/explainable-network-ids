@@ -6,6 +6,7 @@ from fastapi import APIRouter, Query, Request
 from pydantic import BaseModel, FiniteFloat
 
 from apps.api.analyses import AnalysisError, FlowPrediction
+from apps.api import result_storage as storage
 
 SEED = 42
 
@@ -55,19 +56,21 @@ def snapshot(store, id, model_identifier, *, row_number=None, sample_size=50):
         session = store.get(id)
         if session.summary.model_identifier != model_identifier:
             raise AnalysisError(503, 'model_unavailable', 'The analysis model is no longer available.')
-        count = len(session.offsets)
+        count = session.summary.total_flows
         if row_number is not None:
             if not 1 <= row_number <= count:
                 raise AnalysisError(404, 'flow_not_found', 'Flow row not found.')
             indices = np.array([row_number - 1])
         else:
             indices = np.sort(np.random.default_rng(SEED).choice(count, min(sample_size, count), replace=False))
-        rows = []
-        with session.path.open('rb') as source:
+        rows, predictions = [], []
+        with storage.reading(session.path) as connection:
             for index in indices:
-                source.seek(session.offsets[index])
-                rows.append(json.loads(source.readline()))
-        return session.summary.model_copy(deep=True), pd.DataFrame(rows), session.predictions.iloc[indices].copy(deep=True)
+                row = connection.execute(f'SELECT {storage.COLUMNS}, features FROM flows WHERE row_number=?', (int(index)+1,)).fetchone()
+                rows.append(json.loads(row[3]))
+                predictions.append(storage.prediction(row))
+        return (session.summary.model_copy(deep=True), pd.DataFrame(rows, columns=session.schema),
+                pd.DataFrame(predictions))
 
 
 def checked_explanation(artifact, frame, predictions):
