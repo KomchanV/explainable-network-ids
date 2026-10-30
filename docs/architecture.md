@@ -169,3 +169,17 @@ Global importance uses seed 42, NumPy default_rng uniform sampling without
 replacement across all session rows and a descending mean absolute SHAP ranking.
 It describes only that uploaded sample. Neither view supplies causal evidence,
 calibration, confidence, severity or real-time detection.
+
+## Model Insights boundary
+
+`apps/api/evaluation.py` validates and projects the once-loaded artifact into the typed
+`ModelEvaluationResponse` at `GET /model/evaluation`. It does not depend on the temporary
+analysis store or invoke the pipeline. The additive endpoint leaves existing loading,
+inference and SHAP semantics unchanged. Validation compares saved metrics to the fixed
+BENIGN=0/DDoS=1 matrix; failures use the existing structured error envelope.
+
+FastAPI generates the shared OpenAPI contract and TypeScript types. The web API client
+exposes `evaluation()`, consumed by `/model-insights`; a request generation guard prevents
+stale responses after refresh or navigation. The page uses a native accessible table,
+precise metric formatting and explicit provenance/limitations. See [usage and scientific
+interpretation](model-insights.md).

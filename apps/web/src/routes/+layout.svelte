@@ -2,7 +2,7 @@
   import './layout.css';
   import type { LayoutProps } from './$types';
   let { children }: LayoutProps = $props();
-  const planned = ['Model Insights'];
+  import { page } from '$app/state';
 </script>
 
 <svelte:head>
@@ -15,13 +15,9 @@
     <a href="/" class="block font-mono text-sm font-semibold tracking-tight">EN / IDS <span class="text-primary">↗</span></a>
     <p class="mt-2 text-xs text-muted-foreground">Explainable network intelligence</p>
     <nav aria-label="Main navigation" class="mt-10 space-y-2">
-      <a href="/"  class="block rounded-md bg-accent px-3 py-2 text-sm font-medium">Dashboard</a>
+      <a href="/" aria-current={page.url.pathname === "/" ? "page" : undefined} class="block rounded-md bg-accent px-3 py-2 text-sm font-medium">Dashboard</a>
       <a href="/analyze" class="block px-3 py-2 text-sm">Traffic Analysis</a>
-      {#each planned as name}
-        <span class="flex justify-between gap-2 px-3 py-2 text-sm text-muted-foreground">
-          {name}<span class="font-mono text-[10px] uppercase leading-5">planned</span>
-        </span>
-      {/each}
+      <a href="/model-insights" aria-current={page.url.pathname === '/model-insights' ? 'page' : undefined} class="block px-3 py-2 text-sm">Model Insights</a>
     </nav>
     <p class="mt-12 max-w-48 text-xs leading-relaxed text-muted-foreground">Offline academic prototype.<br />BENIGN / DDoS classification.</p>
   </aside>

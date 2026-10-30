@@ -109,6 +109,101 @@
         "title": "ErrorResponse",
         "type": "object"
       },
+      "Evaluation": {
+        "properties": {
+          "accuracy": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Accuracy",
+            "type": "number"
+          },
+          "confusion_matrix": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "minimum": 0.0,
+                    "type": "integer"
+                  },
+                  {
+                    "minimum": 0.0,
+                    "type": "integer"
+                  }
+                ],
+                "type": "array"
+              },
+              {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "minimum": 0.0,
+                    "type": "integer"
+                  },
+                  {
+                    "minimum": 0.0,
+                    "type": "integer"
+                  }
+                ],
+                "type": "array"
+              }
+            ],
+            "title": "Confusion Matrix",
+            "type": "array"
+          },
+          "evaluated_rows": {
+            "exclusiveMinimum": 0.0,
+            "title": "Evaluated Rows",
+            "type": "integer"
+          },
+          "f1": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "F1",
+            "type": "number"
+          },
+          "false_positive_rate": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "False Positive Rate"
+          },
+          "precision": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Precision",
+            "type": "number"
+          },
+          "recall": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Recall",
+            "type": "number"
+          }
+        },
+        "required": [
+          "accuracy",
+          "precision",
+          "recall",
+          "f1",
+          "false_positive_rate",
+          "confusion_matrix",
+          "evaluated_rows"
+        ],
+        "title": "Evaluation",
+        "type": "object"
+      },
       "FeatureContribution": {
         "properties": {
           "absolute_contribution": {
@@ -446,6 +541,169 @@
         "title": "LocalExplanation",
         "type": "object"
       },
+      "Methodology": {
+        "properties": {
+          "preprocessing_summary": {
+            "title": "Preprocessing Summary",
+            "type": "string"
+          },
+          "random_state": {
+            "title": "Random State",
+            "type": "integer"
+          },
+          "split_method": {
+            "title": "Split Method",
+            "type": "string"
+          },
+          "test_class_counts": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "minimum": 0.0,
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Class Counts"
+          },
+          "test_fraction": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Fraction"
+          },
+          "test_rows": {
+            "minimum": 0.0,
+            "title": "Test Rows",
+            "type": "integer"
+          },
+          "train_class_counts": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "minimum": 0.0,
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Train Class Counts"
+          },
+          "train_rows": {
+            "minimum": 0.0,
+            "title": "Train Rows",
+            "type": "integer"
+          },
+          "train_rows_before_subsampling": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Train Rows Before Subsampling"
+          }
+        },
+        "required": [
+          "train_rows",
+          "test_rows",
+          "test_fraction",
+          "random_state",
+          "train_rows_before_subsampling",
+          "train_class_counts",
+          "test_class_counts",
+          "preprocessing_summary",
+          "split_method"
+        ],
+        "title": "Methodology",
+        "type": "object"
+      },
+      "ModelEvaluationResponse": {
+        "properties": {
+          "evaluation": {
+            "$ref": "#/components/schemas/Evaluation"
+          },
+          "label_mapping": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Label Mapping",
+            "type": "object"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "methodology": {
+            "$ref": "#/components/schemas/Methodology"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ModelIdentity"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "model",
+          "evaluation",
+          "provenance",
+          "methodology",
+          "label_mapping",
+          "limitations"
+        ],
+        "title": "ModelEvaluationResponse",
+        "type": "object"
+      },
+      "ModelIdentity": {
+        "properties": {
+          "classifier": {
+            "const": "RandomForestClassifier",
+            "title": "Classifier",
+            "type": "string"
+          },
+          "feature_count": {
+            "title": "Feature Count",
+            "type": "integer"
+          },
+          "format_version": {
+            "title": "Format Version",
+            "type": "integer"
+          },
+          "identifier": {
+            "title": "Identifier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "identifier",
+          "classifier",
+          "format_version",
+          "feature_count"
+        ],
+        "title": "ModelIdentity",
+        "type": "object"
+      },
       "ModelResponse": {
         "properties": {
           "classifier": {
@@ -611,6 +869,65 @@
           "ddos_probability"
         ],
         "title": "Prediction",
+        "type": "object"
+      },
+      "Provenance": {
+        "properties": {
+          "dataset_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Filename"
+          },
+          "dataset_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Sha256"
+          },
+          "evaluation_scope": {
+            "title": "Evaluation Scope",
+            "type": "string"
+          },
+          "source_type": {
+            "enum": [
+              "synthetic",
+              "cic-ids2017",
+              "unspecified"
+            ],
+            "title": "Source Type",
+            "type": "string"
+          },
+          "training_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Training Timestamp"
+          }
+        },
+        "required": [
+          "dataset_filename",
+          "dataset_sha256",
+          "source_type",
+          "training_timestamp",
+          "evaluation_scope"
+        ],
+        "title": "Provenance",
         "type": "object"
       }
     }
@@ -1663,6 +1980,44 @@
           }
         },
         "summary": "Model"
+      }
+    },
+    "/model/evaluation": {
+      "get": {
+        "operationId": "getModelEvaluation",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelEvaluationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Model Evaluation"
       }
     },
     "/predict": {
