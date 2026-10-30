@@ -8,6 +8,7 @@ import asyncio
 import hashlib
 
 from apps.api.analyses import AnalysisError, AnalysisStore, router
+from apps.api.evaluation import ModelEvaluationResponse, evaluation_snapshot
 from apps.api.explanations import router as explanation_router
 from dataclasses import dataclass
 import logging
@@ -162,6 +163,16 @@ def create_app(settings: Settings | None = None):
     def health(request: Request):
         return HealthResponse(status='ok', version=VERSION,
                               model_available=getattr(request.app.state, 'artifact', None) is not None)
+
+    @app.get('/model/evaluation', response_model=ModelEvaluationResponse, operation_id='getModelEvaluation',
+             responses={503: {'model': ErrorResponse}, 500: {'model': ErrorResponse}})
+    def model_evaluation(request: Request):
+        artifact = artifact_for(request)
+        try:
+            return evaluation_snapshot(artifact, request.app.state.model_identifier)
+        except (ValueError, TypeError, KeyError, ZeroDivisionError):
+            return error_response(500, 'invalid_evaluation',
+                                  'The saved evaluation snapshot is inconsistent or invalid. Contact the server operator.')
 
     @app.get('/model', response_model=ModelResponse, operation_id='getModel',
              responses={503: {'model': ErrorResponse}})

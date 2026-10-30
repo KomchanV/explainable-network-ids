@@ -158,6 +158,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/model/evaluation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Model Evaluation */
+        get: operations["getModelEvaluation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/predict": {
         parameters: {
             query?: never;
@@ -225,6 +242,32 @@ export interface components {
         /** ErrorResponse */
         ErrorResponse: {
             error: components["schemas"]["ErrorDetail"];
+        };
+        /** Evaluation */
+        Evaluation: {
+            /** Accuracy */
+            accuracy: number;
+            /** Confusion Matrix */
+            confusion_matrix: [
+                [
+                    number,
+                    number
+                ],
+                [
+                    number,
+                    number
+                ]
+            ];
+            /** Evaluated Rows */
+            evaluated_rows: number;
+            /** F1 */
+            f1: number;
+            /** False Positive Rate */
+            false_positive_rate: number | null;
+            /** Precision */
+            precision: number;
+            /** Recall */
+            recall: number;
         };
         /** FeatureContribution */
         FeatureContribution: {
@@ -377,6 +420,58 @@ export interface components {
             /** Row Number */
             row_number: number;
         };
+        /** Methodology */
+        Methodology: {
+            /** Preprocessing Summary */
+            preprocessing_summary: string;
+            /** Random State */
+            random_state: number;
+            /** Split Method */
+            split_method: string;
+            /** Test Class Counts */
+            test_class_counts: {
+                [key: string]: number;
+            } | null;
+            /** Test Fraction */
+            test_fraction: number | null;
+            /** Test Rows */
+            test_rows: number;
+            /** Train Class Counts */
+            train_class_counts: {
+                [key: string]: number;
+            } | null;
+            /** Train Rows */
+            train_rows: number;
+            /** Train Rows Before Subsampling */
+            train_rows_before_subsampling: number | null;
+        };
+        /** ModelEvaluationResponse */
+        ModelEvaluationResponse: {
+            evaluation: components["schemas"]["Evaluation"];
+            /** Label Mapping */
+            label_mapping: {
+                [key: string]: number;
+            };
+            /** Limitations */
+            limitations: string[];
+            methodology: components["schemas"]["Methodology"];
+            model: components["schemas"]["ModelIdentity"];
+            provenance: components["schemas"]["Provenance"];
+        };
+        /** ModelIdentity */
+        ModelIdentity: {
+            /**
+             * Classifier
+             * @constant
+             */
+            classifier: "RandomForestClassifier";
+            /** Feature Count */
+            feature_count: number;
+            /** Format Version */
+            format_version: number;
+            /** Identifier */
+            identifier: string;
+        };
         /** ModelResponse */
         ModelResponse: {
             /**
@@ -435,6 +530,22 @@ export interface components {
             prediction: "BENIGN" | "DDoS";
             /** Row Number */
             row_number: number;
+        };
+        /** Provenance */
+        Provenance: {
+            /** Dataset Filename */
+            dataset_filename: string | null;
+            /** Dataset Sha256 */
+            dataset_sha256: string | null;
+            /** Evaluation Scope */
+            evaluation_scope: string;
+            /**
+             * Source Type
+             * @enum {string}
+             */
+            source_type: "synthetic" | "cic-ids2017" | "unspecified";
+            /** Training Timestamp */
+            training_timestamp: string | null;
         };
     };
     responses: never;
@@ -1205,6 +1316,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModelResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getModelEvaluation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelEvaluationResponse"];
                 };
             };
             /** @description Internal Server Error */
