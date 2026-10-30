@@ -347,3 +347,15 @@ Run `.venv/bin/python -m scripts.compare_baseline` before
 The comparison includes a temporary RF clone for classifier training timing only.
 Do not rerun the original training workflow as demo setup. A subsequent real Brave smoke test passed, including native CSV upload/download
 and global/local SHAP; see `reports/real-data/browser-smoke-test.json`.
+
+### Model Insights
+
+The [Model Insights guide](docs/model-insights.md) describes `/model-insights`, available
+from primary navigation without uploading traffic. It shows saved held-out metrics,
+actual/predicted confusion-matrix counts, artifact identity and dataset provenance through
+`GET /model/evaluation`. Missing optional metadata stays missing; inconsistent snapshots
+are rejected rather than corrected. Synthetic artifacts are clearly disclosed. These
+same-scenario evaluation results do not measure accuracy on newly uploaded traffic or
+establish performance on unseen networks.
+
+See the [milestone verification and release-readiness report](docs/model-insights-verification.md).

@@ -151,3 +151,20 @@ In a sandbox that denies Nx plugin sockets, local verification can use
 `NX_DAEMON=false NX_ISOLATE_PLUGINS=false` without changing project configuration.
 Playwright still needs permission to bind its documented loopback test ports and
 launch Chromium.
+
+## Model evaluation API and UI
+
+Use `GET /model/evaluation` for a saved evaluation snapshot. HTTP 503 means no loaded
+trusted model; HTTP 500 `invalid_evaluation` means the saved snapshot failed integrity
+validation. No endpoint retrains or repairs it. Do not replace missing historical metadata
+with training defaults or uploaded analysis predictions. The response contract is generated
+from FastAPI; run `pnpm contract:generate` after schema changes and `pnpm contract:check`
+to verify synchronization.
+
+New coverage lives in `apps/api/tests/test_evaluation.py`, the web metric/client tests,
+and `apps/web/e2e/model-insights.spec.ts`. Browser tests use only an isolated synthetic
+fixture. Run `pnpm check`, `pnpm test`, `pnpm build`, `pnpm contract:check`, and
+`pnpm nx e2e web --output-style=static`; verify the original local artifact with
+`pnpm nx run ids-core:compatibility` when available. In restricted environments use
+`NX_DAEMON=false NX_ISOLATE_PLUGINS=false` to avoid Nx plugin socket warnings; browser
+servers still require local network/process permission. See [Model Insights](model-insights.md).
