@@ -23,7 +23,7 @@
   --accent-foreground: #1e40af;
   --destructive: #b42332;
   --border: #cbd5e1;
-  --input: #cbd5e1;
+  --input: #7889a0;
   --ring: #2563eb;
   --benign: #0f766e;
   --benign-surface: #e0f4ef;
@@ -49,7 +49,7 @@
   --accent-foreground: #bad2ff;
   --destructive: #fda4af;
   --border: #35465f;
-  --input: #35465f;
+  --input: #7185a2;
   --ring: #93b8ff;
   --benign: #5eead4;
   --benign-surface: #153a3c;
@@ -103,7 +103,7 @@
   .console-button { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50; }
   .console-button.primary { @apply border-primary bg-primary text-primary-foreground hover:bg-primary/90; }
   .control-label { @apply flex min-w-0 flex-col gap-2 text-xs font-medium text-muted-foreground; }
-  .control-label input, .control-label select { @apply min-h-11 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground; }
+  .control-label input, .control-label select { @apply min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground; }
   .error-box { @apply rounded-lg border border-destructive/50 bg-card p-4 text-sm text-destructive; }
   .badge { display: inline-flex; align-items: center; gap: .375rem; border-radius: .375rem; padding: .25rem .5rem; font-size: .75rem; font-weight: 600; }
   .badge.benign { color: var(--benign); background: var(--benign-surface); }

@@ -29,7 +29,7 @@
 <div class="flex flex-wrap items-start justify-between gap-4">
   <div><h1 class="page-title">Model Insights</h1>
     <p class="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Saved held-out evaluation of the loaded Random Forest. These results describe labeled test data, independently of any current uploaded analysis.</p></div>
-  <Button variant="outline" onclick={refresh} disabled={loading}>Refresh evaluation</Button>
+  <Button class="min-h-11" variant="outline" onclick={refresh} disabled={loading}>Refresh evaluation</Button>
 </div>
 <div class="mt-8 space-y-8" aria-live="polite" aria-busy={loading}>
   {#if loading}<p role="status">Loading saved evaluation…</p>

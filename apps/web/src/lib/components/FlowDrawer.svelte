@@ -1,10 +1,19 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import type { Snippet } from 'svelte';
   let { open, onclose, children }: { open: boolean; onclose: () => void; children: Snippet } = $props();
   let dialog: HTMLDialogElement;
   let closeButton: HTMLButtonElement;
   let origin: HTMLElement | null = null;
+  let mobile = $state(false);
+  let shownModal = false;
+  onMount(() => {
+    const media = matchMedia('(max-width: 640px)');
+    mobile = media.matches;
+    const update = () => { mobile = media.matches; };
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  });
   function restoreFocus() {
     if (origin?.isConnected) origin.focus({ preventScroll: true });
     origin = null;
@@ -12,11 +21,15 @@
   function close() { onclose(); }
   $effect(() => {
     if (!dialog) return;
-    if (open && !dialog.open) {
-      origin = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      dialog.show();
-      closeButton.focus({ preventScroll: true });
-    } else if (!open && dialog.open) { dialog.close(); restoreFocus(); }
+    if (open) {
+      if (!dialog.open) origin = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      if (!dialog.open || shownModal !== mobile) {
+        if (dialog.open) dialog.close();
+        if (mobile) dialog.showModal(); else dialog.show();
+        shownModal = mobile;
+        closeButton.focus({ preventScroll: true });
+      }
+    } else if (dialog.open) { dialog.close(); restoreFocus(); }
   });
   onDestroy(() => { dialog?.close(); restoreFocus(); });
 </script>

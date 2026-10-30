@@ -14,6 +14,7 @@
   import type { LayoutProps } from './$types';
   let { children }: LayoutProps = $props();
   let menuOpen = $state(false);
+  let ready = $state(false);
   let preference = $state<ThemePreference>('system');
   let systemDark = $state(false);
   const navigation = [
@@ -42,6 +43,7 @@
       if (stored === 'light' || stored === 'dark') preference = stored;
     } catch { /* Use system preference. */ }
     applyTheme();
+    ready = true;
     const update = () => { systemDark = media.matches; applyTheme(); };
     media.addEventListener('change', update);
     return () => media.removeEventListener('change', update);
@@ -54,7 +56,7 @@
   <aside class="sidebar">
     <div class="sidebar-heading">
       <a href="/" class="brand"><ShieldCheckIcon size={28} weight="duotone" /><span>Explainable IDS<small>Security analytics workspace</small></span></a>
-      <button class="console-button menu-toggle" aria-label={menuOpen ? 'Close navigation' : 'Open navigation'} aria-expanded={menuOpen} aria-controls="workspace-nav" onclick={() => { menuOpen = !menuOpen; }}>
+      <button class="console-button menu-toggle" aria-label={menuOpen ? 'Close navigation' : 'Open navigation'} aria-expanded={menuOpen} aria-controls="workspace-nav" disabled={!ready} onclick={() => { menuOpen = !menuOpen; }}>
         {#if menuOpen}<XIcon size={20} />{:else}<ListIcon size={20} />{/if}
       </button>
     </div>
@@ -70,7 +72,7 @@
   <div class="workspace-body">
     <header class="workspace-header">
       <span class="text-sm font-medium">{section}</span>
-      <label class="theme-control">Theme<select aria-label="Theme" bind:value={preference} onchange={(event) => { preference = event.currentTarget.value as ThemePreference; changeTheme(); }}><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+      <label class="theme-control">Theme<select disabled={!ready} aria-label="Theme" bind:value={preference} onchange={(event) => { preference = event.currentTarget.value as ThemePreference; changeTheme(); }}><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
     </header>
     <main id="main" tabindex="-1">{@render children()}</main>
   </div>
@@ -93,7 +95,7 @@
   .workspace-body { min-width: 0; }
   .workspace-header { min-height: 76px; border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
   .theme-control { display: flex; gap: .65rem; align-items: center; font-size: .75rem; color: var(--muted-foreground); }
-  .theme-control select { min-height: 2.75rem; padding: .5rem; border: 1px solid var(--border); border-radius: .5rem; background: var(--card); color: var(--foreground); }
+  .theme-control select { min-height: 2.75rem; padding: .5rem; border: 1px solid var(--input); border-radius: .5rem; background: var(--card); color: var(--foreground); }
   main { max-width: 1440px; margin-inline: auto; padding: 2rem; outline-offset: -2px; }
   .menu-toggle { display: none; }
   @media (max-width: 900px) {

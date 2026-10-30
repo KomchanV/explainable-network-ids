@@ -6,6 +6,7 @@ This directory contains both **current v0.2 guidance** and **historical research
 
 | Document | Purpose |
 | --- | --- |
+| [Workspace redesign](ui-redesign-verification.md) | v0.3 UI behavior, screenshots, validation and limitations |
 | [Architecture](architecture.md) | Current Nx, SvelteKit, FastAPI, and Python engine boundaries |
 | [Development workflow](development.md) | Setup, local commands, tests, CI, API schema generation |
 | [CSV traffic analysis](traffic-analysis.md) | Upload limits, Flow Explorer, prediction export, temporary sessions |
