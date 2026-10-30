@@ -183,3 +183,24 @@ exposes `evaluation()`, consumed by `/model-insights`; a request generation guar
 stale responses after refresh or navigation. The page uses a native accessible table,
 precise metric formatting and explicit provenance/limitations. See [usage and scientific
 interpretation](model-insights.md).
+
+## v0.3 workspace UI
+
+The redesign preserves the HTTP/ML boundary and generated contracts. `/` prioritizes
+current-upload statistics; `/analyze` remains the upload route; `/explorer` resolves
+the optional browser-selected analysis into `/analyses/[id]`; `/model-insights`
+keeps saved evaluation and current-upload global SHAP in explicitly separate sections.
+No list/history endpoint, database, job status endpoint or model logic was added.
+
+Presentation stays in Svelte components. `theme.ts` resolves preference, the layout
+owns responsive navigation/theme events, and one CSS token source serves both native
+controls and the existing shadcn Button. Per-icon imports avoid loading the icon
+library's full barrel. `AnalysisSummary` shares accurate counts and a distribution.
+`FlowDrawer` manages native dialog mode, responsive focus containment and restoration;
+`FlowExplorer` retains request/domain orchestration. Flow detail, explanation and page
+requests use version invalidation when selection, route, delete or close changes.
+Closing a drawer does not reset filters/page. `CurrentAnalysisExplanation` checks the
+optional current ID independently of the saved evaluation, and never computes SHAP
+until requested. There is no production fixture or new network dependency.
+
+See [design foundations](../DESIGN.md) and [verification](ui-redesign-verification.md).

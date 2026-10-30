@@ -36,7 +36,7 @@ test('loading, unavailable model, disconnected API and retry', async ({ page }) 
     await route.fulfill({ status: 503, json: { error: { code: 'model_unavailable', message: 'The trusted model is unavailable.' } } });
   });
   await page.goto('/model-insights');
-  await expect(page.getByRole('status')).toHaveText('Loading saved evaluation…');
+  await expect(page.getByRole('status').filter({ hasText: 'Loading saved evaluation…' })).toHaveText('Loading saved evaluation…');
   release();
   await expect(page.getByRole('alert')).toContainText('The trusted model is unavailable.');
   await page.unroute('**/model/evaluation');
