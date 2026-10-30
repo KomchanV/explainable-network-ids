@@ -78,7 +78,7 @@ servers bind to loopback and CORS allows only the two documented development ori
 The SvelteKit dashboard fetches health and saved-model metadata after mounting.
 It has connection/loading errors, an unavailable-model state, and a refresh action.
 Traffic Analysis links to `/analyze`; successful uploads link to `/analyses/[id]`.
-Local and global SHAP investigation lives in the current Flow Explorer; Model Insights remains planned.
+Local and global SHAP investigation lives in the Flow Explorer; Model Insights is available at `/model-insights` and reads the loaded artifact's saved labeled evaluation independently of upload sessions.
 The reusable layout and checked-in shadcn Button support subsequent UI work.
 No fabricated traffic counters or new experimental metrics are displayed.
 
