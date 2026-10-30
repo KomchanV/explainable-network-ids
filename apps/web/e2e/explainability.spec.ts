@@ -24,6 +24,7 @@ test('uploaded flows have real local reconstruction and sampled global importanc
   await expect(page.getByTestId('reconstructed-probability')).toHaveText(local.reconstructed_probability.toFixed(6));
   await expect(page.getByText('All feature contributions · model feature order')).toBeVisible();
   await page.getByLabel('Visible contributions').selectOption(String(local.feature_contributions.length));
+  await page.getByRole('button', { name: 'Close flow details' }).click();
   await page.getByRole('button', { name: 'Inspect row 2', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Flow 2 details' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Local SHAP explanation', exact: true })).toHaveCount(0);
@@ -34,6 +35,7 @@ test('uploaded flows have real local reconstruction and sampled global importanc
   await expect(page.getByRole('region', {name: 'SHAP waterfall', exact: true})).toBeVisible();
   await page.getByRole('region', {name: 'Local SHAP explanation', exact: true}).screenshot({path: 'test-results/shap-local-mobile.png'});
   await page.setViewportSize({width: 1280, height: 720});
+  await page.getByRole('button', { name: 'Close flow details' }).click();
   await page.getByLabel('Sample size (1–100)').fill('9');
   const globalResponse = page.waitForResponse(r => r.url().includes('/explanations/global?'));
   await page.getByRole('button', { name: 'Generate Global Explanation', exact: true }).click();
@@ -45,7 +47,9 @@ test('uploaded flows have real local reconstruction and sampled global importanc
   await expect(ranking).toContainText(global.feature_importance[0].feature);
   await expect(ranking).toContainText(global.feature_importance[0].mean_abs_shap.toFixed(6));
   await page.getByRole('region', {name: 'Global explainability', exact: true}).screenshot({path: 'test-results/shap-global-desktop.png'});
+  if (await page.getByRole('button', { name: 'Close flow details' }).isVisible()) await page.getByRole('button', { name: 'Close flow details' }).click();
   await page.getByRole('button', {name: 'Delete analysis', exact: true}).click();
+  await page.getByRole('button', { name: 'Confirm deletion', exact: true }).click();
 });
 
 test('late responses cannot overwrite a newly selected flow', async ({ page }) => {
@@ -64,6 +68,7 @@ test('late responses cannot overwrite a newly selected flow', async ({ page }) =
   await page.getByRole('button', { name: 'Explain Prediction', exact: true }).click();
   await expect(page.getByText('Computing SHAP for this flow…')).toBeVisible();
   await started;
+  await page.getByRole('button', { name: 'Close flow details' }).click();
   await page.getByRole('button', { name: 'Inspect row 2', exact: true }).click();
   await page.getByRole('button', { name: 'Explain Prediction', exact: true }).click();
   await expect(page.getByText('Local / Flow 2', {exact: true})).toBeVisible();
@@ -72,7 +77,9 @@ test('late responses cannot overwrite a newly selected flow', async ({ page }) =
   await (await lateResponse).finished();
   await expect(page.getByText('Local / Flow 1', {exact: true})).toHaveCount(0);
   await expect(page.getByText('Local / Flow 2', {exact: true})).toBeVisible();
+  if (await page.getByRole('button', { name: 'Close flow details' }).isVisible()) await page.getByRole('button', { name: 'Close flow details' }).click();
   await page.getByRole('button', {name: 'Delete analysis', exact: true}).click();
+  await page.getByRole('button', { name: 'Confirm deletion', exact: true }).click();
 });
 
 test('failed, expired and model-unavailable explanation requests remain actionable', async ({ page }) => {
@@ -88,10 +95,13 @@ test('failed, expired and model-unavailable explanation requests remain actionab
     await expect(page.getByRole('alert')).toContainText(message);
     await expect(page.getByRole('region', { name: 'Local SHAP explanation', exact: true })).toHaveCount(0);
   }
+  await page.getByRole('button', { name: 'Close flow details' }).click();
   await page.route('**/explanations/global?*', route => route.fulfill({status: 503, json: {error: {code: 'explanation_busy', message: 'Another explanation is being computed. Retry after it finishes.'}}}));
   await page.getByRole('button', { name: 'Generate Global Explanation', exact: true }).click();
   await expect(page.getByRole('region', {name: 'Global explainability', exact: true}).getByRole('alert')).toContainText('Another explanation');
+  if (await page.getByRole('button', { name: 'Close flow details' }).isVisible()) await page.getByRole('button', { name: 'Close flow details' }).click();
   await page.getByRole('button', {name: 'Delete analysis', exact: true}).click();
+  await page.getByRole('button', { name: 'Confirm deletion', exact: true }).click();
 });
 
 
@@ -101,6 +111,7 @@ test('client-side navigation between analyses resets selected flow and global ex
   await page.getByRole('button', {name: 'Inspect row 1', exact: true}).click();
   await page.getByRole('button', {name: 'Explain Prediction', exact: true}).click();
   await expect(page.getByText('Local / Flow 1', {exact: true})).toBeVisible();
+  await page.getByRole('button', { name: 'Close flow details' }).click();
   await page.getByRole('button', {name: 'Generate Global Explanation', exact: true}).click();
   await expect(page.getByRole('table', {name: 'Global feature importance'})).toBeVisible();
   const csv = await readFile('test-results/flows.csv');
@@ -117,6 +128,8 @@ test('client-side navigation between analyses resets selected flow and global ex
   await expect(page.getByRole('region', {name: 'Local SHAP explanation', exact: true})).toHaveCount(0);
   await expect(page.getByRole('table', {name: 'Global feature importance'})).toHaveCount(0);
   await expect(page.getByText('No global explanation generated.', {exact: false})).toBeVisible();
+  if (await page.getByRole('button', { name: 'Close flow details' }).isVisible()) await page.getByRole('button', { name: 'Close flow details' }).click();
   await page.getByRole('button', {name: 'Delete analysis', exact: true}).click();
+  await page.getByRole('button', { name: 'Confirm deletion', exact: true }).click();
   await request.delete(`http://127.0.0.1:8001/api/v1/analyses/${first.split('/').at(-1)}`);
 });
