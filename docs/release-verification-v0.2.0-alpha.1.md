@@ -14,8 +14,8 @@ Date: 2026-10-30 (Asia/Bangkok). Release preparation is based on GitHub main com
 
 ## Evidence from existing milestone verification
 
-- [Model Insights verification](docs/model-insights-verification.md) reports 57 API, 43 ML engine, 16 frontend and 10 browser tests passed, saved held-out metrics backed by the trusted artifact, and read-only model compatibility.
-- [SHAP verification](docs/shap-verification.md) records numerical reconstruction limits and synthetic browser testing.
+- [Model Insights verification](model-insights-verification.md) reports 57 API, 43 ML engine, 16 frontend and 10 browser tests passed, saved held-out metrics backed by the trusted artifact, and read-only model compatibility.
+- [SHAP verification](shap-verification.md) records numerical reconstruction limits and synthetic browser testing.
 - These milestone runs and the already-completed mainline CI are the verification evidence. A separate clean-clone release candidate matrix across operating systems has **not** been executed in this preparation.
 
 ## Publication gates
