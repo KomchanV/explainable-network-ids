@@ -1,0 +1,142 @@
+{
+  "kind": "synthetic software baseline; not detection accuracy or capacity certification",
+  "environment": {
+    "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "python": "3.13.13",
+    "logical_cpus": 8,
+    "packages": {
+      "numpy": "2.2.6",
+      "pandas": "2.2.3",
+      "scikit-learn": "1.6.1",
+      "shap": "0.48.0",
+      "fastapi": "0.121.0",
+      "httpx": "0.28.1"
+    },
+    "command": [
+      "/Users/komchanv/Local Documents/xai/.venv/bin/python",
+      "-m",
+      "scripts.benchmark_traffic",
+      "--rows",
+      "50000",
+      "--repeats",
+      "3",
+      "--output",
+      "docs/performance/traffic-sqlite-50k-2026-10-30.json"
+    ],
+    "revision": "961dfa01c2ddf7781c93fa74343205c1ebde332a",
+    "working_tree_dirty": true,
+    "thread_environment": {
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "MKL_NUM_THREADS": null
+    }
+  },
+  "model": {
+    "provenance": "synthetic",
+    "training_input_rows": 400,
+    "seed": 42,
+    "n_estimators": 100,
+    "max_depth": 12,
+    "n_jobs": -1
+  },
+  "measurement": {
+    "timed": "store.create including preflight; HTTP in-process queries, local/global SHAP, export",
+    "excluded": "startup imports, model fitting/loading, input generation, export verification, deletion; HTTP upload excluded unless requested",
+    "cold_start": "first local SHAP includes lazy SHAP imports/JIT; each case uses a fresh process",
+    "python_peak": "tracemalloc during timed stages; includes tracing overhead in elapsed time",
+    "rss_peak": "OS process lifetime high-water RSS, includes imports and model loading; not a delta",
+    "storage": "completed SQLite files; upload bytes also reserved by service quota; benchmark export file outside server quota",
+    "transport": "TestClient buffers uploads/responses; bounded-export uses server lease directly and writes a client file incrementally",
+    "throughput": "rows / ingestion seconds; total_seconds also includes result access"
+  },
+  "cases": [
+    {
+      "rows": 50000,
+      "feature_count": 6,
+      "input_bytes": 2459187,
+      "storage_bytes": 5898240,
+      "export_bytes": 809702,
+      "export_rows": 50000,
+      "prediction_rows_verified": 50000,
+      "export_sha256": "c84670c8932dd7ae37050c9ac588ef8ca8eaa21c5d742679b75bc83a0afb58dc",
+      "http_upload": false,
+      "bounded_export": false,
+      "ingestion_python_peak_bytes": 5570404,
+      "ingestion_process_peak_rss_bytes": 213630976,
+      "export_additional_python_peak_bytes": 1760900,
+      "total_seconds": 23.29924829200172,
+      "stage_seconds": {
+        "ingestion": 3.091362917002698,
+        "queries": 0.014838458002486732,
+        "local_shap": 19.784953958995175,
+        "global_shap": 0.10816229099873453,
+        "export": 0.2999030419960036
+      },
+      "rows_per_second": 16174.095809002798,
+      "python_peak_bytes": 42366267,
+      "process_peak_rss_before_bytes": 200835072,
+      "process_peak_rss_bytes": 227246080,
+      "max_shap_reconstruction_error": 9.43689570931383e-16,
+      "repeat": 1
+    },
+    {
+      "rows": 50000,
+      "feature_count": 6,
+      "input_bytes": 2459187,
+      "storage_bytes": 5898240,
+      "export_bytes": 809702,
+      "export_rows": 50000,
+      "prediction_rows_verified": 50000,
+      "export_sha256": "c84670c8932dd7ae37050c9ac588ef8ca8eaa21c5d742679b75bc83a0afb58dc",
+      "http_upload": false,
+      "bounded_export": false,
+      "ingestion_python_peak_bytes": 5570044,
+      "ingestion_process_peak_rss_bytes": 223412224,
+      "export_additional_python_peak_bytes": 1760808,
+      "total_seconds": 21.948154166995664,
+      "stage_seconds": {
+        "ingestion": 2.9334515829978045,
+        "queries": 0.0126906669975142,
+        "local_shap": 18.581936874994426,
+        "global_shap": 0.11612166700069793,
+        "export": 0.30392791600024793
+      },
+      "rows_per_second": 17044.767430217176,
+      "python_peak_bytes": 42366710,
+      "process_peak_rss_before_bytes": 211238912,
+      "process_peak_rss_bytes": 230948864,
+      "max_shap_reconstruction_error": 9.43689570931383e-16,
+      "repeat": 2
+    },
+    {
+      "rows": 50000,
+      "feature_count": 6,
+      "input_bytes": 2459187,
+      "storage_bytes": 5898240,
+      "export_bytes": 809702,
+      "export_rows": 50000,
+      "prediction_rows_verified": 50000,
+      "export_sha256": "c84670c8932dd7ae37050c9ac588ef8ca8eaa21c5d742679b75bc83a0afb58dc",
+      "http_upload": false,
+      "bounded_export": false,
+      "ingestion_python_peak_bytes": 5570264,
+      "ingestion_process_peak_rss_bytes": 227442688,
+      "export_additional_python_peak_bytes": 1760587,
+      "total_seconds": 21.677742125000805,
+      "stage_seconds": {
+        "ingestion": 2.8631136659969343,
+        "queries": 0.013075249997200444,
+        "local_shap": 18.386590875001275,
+        "global_shap": 0.11594283399608685,
+        "export": 0.2989897910010768
+      },
+      "rows_per_second": 17463.505062272838,
+      "python_peak_bytes": 42367452,
+      "process_peak_rss_before_bytes": 211795968,
+      "process_peak_rss_bytes": 241942528,
+      "max_shap_reconstruction_error": 9.43689570931383e-16,
+      "repeat": 3
+    }
+  ]
+}

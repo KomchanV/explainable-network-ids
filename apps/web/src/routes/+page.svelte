@@ -61,7 +61,7 @@
         <p>Turn network-flow records into explainable predictions. Import a CIC-IDS2017 CSV, identify predicted DDoS flows, and examine the features behind each result.</p>
         {#if currentError}<p role="alert" class="error-box my-4">{currentError}</p>{/if}
         <a href="/analyze" class="console-button primary"><UploadSimpleIcon size={18} />Import dataset<ArrowRightIcon size={18} /></a>
-        <span class="start-format">CSV · Up to 200 MB · 50,000 rows</span>
+        <span class="start-format">CSV · Up to 200 MB · 100,000 rows</span>
       </div>
       <div class="start-guide">
         <h3>Your investigation path</h3>

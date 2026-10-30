@@ -166,7 +166,8 @@ def test_results_never_rerun_inference_and_filters_are_exact(client, bundle, mon
     assert client.get(base + '/export').status_code == 200
 
 
-def test_actual_row_limit_before_inference(client):
+def test_actual_row_limit_before_inference(client, monkeypatch):
+    monkeypatch.setattr(client.app.state.analyses, 'max_rows', 50000)
     response = client.post('/api/v1/analyses', content=b'x\n' + b'1\n' * 50001, headers={'Content-Type': 'text/csv'})
     assert response.status_code == 422
     assert '50,000 row limit' in response.json()['error']['message']
@@ -370,7 +371,9 @@ def test_explanation_rejects_invalid_numerical_contract(client, bundle, monkeypa
         return explanation
     monkeypatch.setattr(src.explain, 'explain_flows', malformed)
     if kind == 'stored_probability':
-        client.app.state.analyses.sessions[id].predictions.loc[0, 'ddos_probability'] = .123456789
+        import sqlite3
+        with sqlite3.connect(client.app.state.analyses.sessions[id].path) as connection:
+            connection.execute('UPDATE flows SET probability=? WHERE row_number=1', (.123456789,))
     for path in ('flows/1/explanation', 'explanations/global'):
         response = client.get(f'/api/v1/analyses/{id}/{path}')
         assert response.status_code == 500
@@ -467,9 +470,265 @@ def test_synthetic_lifecycle_benchmark(bundle, tmp_path):
     assert not list(tmp_path.iterdir())
 
 
-@pytest.mark.parametrize('rows', [0, -1, 50001])
+@pytest.mark.parametrize('rows', [0, -1, 1000001])
 def test_benchmark_rejects_invalid_sizes_before_model_loading(tmp_path, rows):
     from scripts.benchmark_traffic import run_case
     with pytest.raises(ValueError, match='rows'):
         run_case(tmp_path / 'not-a-model', rows=rows, directory=tmp_path)
     assert not list(tmp_path.iterdir())
+
+
+def test_disk_batches_parity_and_no_retained_frames(client, bundle, monkeypatch):
+    from src.data_loader import read_csv
+    store = client.app.state.analyses
+    monkeypatch.setattr(store, 'batch_rows', 2, raising=False)
+    frame = bundle[1]['explanation_sample'].iloc[:7].copy()
+    frame.iloc[1, 0] = np.nan
+    frame.iloc[3, 1] = np.inf
+    frame = pd.concat([frame, frame.iloc[:2]], ignore_index=True)
+    frame['Source IP'] = 'NEVER-STORE-THIS'
+    expected, notes = predict_batch(bundle[1], read_csv(io.StringIO(frame.to_csv(index=False))))
+    calls = []
+    original = predict_batch
+    def record(artifact, chunk):
+        calls.append(len(chunk))
+        return original(artifact, chunk)
+    monkeypatch.setattr('src.predict.predict_batch', record)
+    result = upload(client, frame)
+    assert result.status_code == 201, result.text
+    summary = result.json()
+    session = store.sessions[summary['id']]
+    assert calls == [2, 2, 2, 2, 1]
+    assert not hasattr(session, 'predictions') and not hasattr(session, 'offsets')
+    assert session.path.read_bytes().startswith(b'SQLite format 3')
+    assert b'NEVER-STORE-THIS' not in session.path.read_bytes()
+    assert summary['imputed_cells'] == notes['imputed_cells']
+    actual = pd.read_csv(io.StringIO(client.get(f"/api/v1/analyses/{summary['id']}/export").text))
+    pd.testing.assert_frame_equal(actual, expected, atol=1e-12)
+
+
+def test_late_batch_failure_cleans_sqlite(client, bundle, monkeypatch):
+    store = client.app.state.analyses
+    monkeypatch.setattr(store, 'batch_rows', 2, raising=False)
+    calls = 0
+    def fail_late(artifact, frame):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            assert not store.sessions
+            raise ValueError('synthetic late failure')
+        return predict_batch(artifact, frame)
+    with monkeypatch.context() as patch:
+        patch.setattr('src.predict.predict_batch', fail_late)
+        assert upload(client, bundle[1]['explanation_sample'].iloc[:5]).status_code == 422
+    assert calls == 2
+    assert not store.sessions and not list(store.root.iterdir())
+    assert upload(client, bundle[1]['explanation_sample'].iloc[:5]).status_code == 201
+
+
+@pytest.mark.parametrize('expire', [False, True])
+def test_export_lease_survives_removal_and_keeps_quota(client, bundle, expire, monkeypatch):
+    from apps.api.analyses import AnalysisError
+    store = client.app.state.analyses
+    id = upload(client, bundle[1]['explanation_sample'].iloc[:5]).json()['id']
+    path = store.sessions[id].path
+    lease = store.export(id)
+    stream = lease.chunks()
+    assert next(stream).startswith(b'row_number,')
+    if expire:
+        store.sessions[id].deadline = time.monotonic() - 1
+        store.cleanup()
+    else:
+        assert client.delete(f'/api/v1/analyses/{id}').status_code == 204
+    assert id not in store.sessions and path.exists()
+    assert store.disk_usage() == path.stat().st_size
+    monkeypatch.setattr(store, 'max_disk_bytes', store.disk_usage() + 1)
+    assert upload(client, bundle[1]['explanation_sample'].iloc[:2]).status_code == 503
+    exported = b''.join(stream).decode()
+    assert [int(line.split(',')[0]) for line in exported.splitlines()] == list(range(1, 6))
+    lease.close()
+    lease.close()  # cancellation/background cleanup must be idempotent
+    assert not path.exists() and not store.exports
+
+
+def test_export_concurrency_and_timeout_cleanup(client, bundle, monkeypatch):
+    store = client.app.state.analyses
+    id = upload(client, bundle[1]['explanation_sample'].iloc[:2]).json()['id']
+    monkeypatch.setattr(store, 'max_exports', 1)
+    lease = store.export(id)
+    assert client.get(f'/api/v1/analyses/{id}/export').json()['error']['code'] == 'export_busy'
+    lease.deadline = time.monotonic() - 1
+    with pytest.raises(TimeoutError):
+        list(lease.chunks())
+    lease.close()
+    assert not store.exports
+    assert client.get(f'/api/v1/analyses/{id}/export').status_code == 200
+    assert not store.exports
+
+
+def test_processing_deadline_and_upload_disk_reservation(client, bundle, monkeypatch):
+    store = client.app.state.analyses
+    frame = bundle[1]['explanation_sample'].iloc[:2]
+    monkeypatch.setattr(store, 'processing_timeout', -1)
+    assert upload(client, frame).json()['error']['code'] == 'processing_timeout'
+    assert not store.ingestion.locked() and not list(store.root.iterdir())
+    monkeypatch.setattr(store, 'processing_timeout', 600)
+    monkeypatch.setattr(store, 'max_disk_bytes', 50)
+    assert upload(client, frame).json()['error']['code'] == 'storage_full'
+    assert store.upload_bytes == 0 and not store.ingestion.locked()
+    assert not list(store.root.iterdir())
+
+
+def test_configured_limits(monkeypatch):
+    from apps.api.analyses import AnalysisStore
+    monkeypatch.setenv('IDS_ANALYSIS_BATCH_ROWS', '3')
+    monkeypatch.setenv('IDS_ANALYSIS_MAX_ROWS', '123456')
+    store = AnalysisStore()
+    try:
+        assert store.batch_rows == 3 and store.max_rows == 123456
+    finally:
+        store.close()
+    monkeypatch.setenv('IDS_ANALYSIS_BATCH_ROWS', '0')
+    with pytest.raises(ValueError, match='BATCH_ROWS'):
+        AnalysisStore()
+
+
+def test_active_ingestion_is_exclusive_while_batch_runs(client, bundle, monkeypatch):
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    entered, release = threading.Event(), threading.Event()
+    def blocking(artifact, frame):
+        entered.set()
+        assert release.wait(5)
+        return predict_batch(artifact, frame)
+    monkeypatch.setattr('src.predict.predict_batch', blocking)
+    frame = bundle[1]['explanation_sample'].iloc[:2]
+    with ThreadPoolExecutor() as pool:
+        first = pool.submit(upload, client, frame)
+        assert entered.wait(5)
+        try:
+            assert upload(client, frame).json()['error']['code'] == 'analysis_busy'
+            assert not client.app.state.analyses.sessions
+        finally:
+            release.set()
+        assert first.result().status_code == 201
+
+
+def test_100k_end_to_end_upload_queries_shap_export(client, bundle, monkeypatch):
+    # Narrow deterministic input (~3 MiB), small fitted fixture. Expensive
+    # 100-tree performance measurements remain opt-in in benchmark_traffic.
+    from src.data_loader import read_csv
+    store = client.app.state.analyses
+    monkeypatch.setattr(store, 'max_rows', 100000)
+    sample = bundle[1]['explanation_sample'].iloc[:5].copy()
+    sample.iloc[0, 0] = np.nan
+    sample.iloc[1, 1] = np.inf
+    expected, notes = predict_batch(bundle[1], read_csv(io.StringIO(sample.to_csv(index=False))))
+    lines = sample.to_csv(index=False).splitlines(keepends=True)
+    data = (lines[0] + ''.join(lines[1:]) * 20000).encode()
+    sizes = []
+    def bounded(artifact, chunk):
+        sizes.append(len(chunk))
+        return predict_batch(artifact, chunk)
+    monkeypatch.setattr('src.predict.predict_batch', bounded)
+    response = client.post('/api/v1/analyses', content=data, headers={'Content-Type': 'text/csv'})
+    assert response.status_code == 201, response.text
+    summary = response.json()
+    assert summary['total_flows'] == 100000
+    assert sizes == [10000] * 10
+    assert summary['imputed_cells'] == notes['imputed_cells'] * 20000
+    base = f"/api/v1/analyses/{summary['id']}"
+    assert client.get(base + '/flows?page=1000&page_size=100').json()['items'][-1]['row_number'] == 100000
+    assert client.get(base + '/flows/100000').status_code == 200
+    assert client.get(base + '/flows/100000/explanation').json()['reconstruction_error'] < 1e-6
+    global_result = client.get(base + '/explanations/global').json()
+    expected_indices = np.sort(np.random.default_rng(42).choice(100000, 50, replace=False)) + 1
+    assert global_result['sampled_row_numbers'] == expected_indices.tolist()
+    assert global_result['max_reconstruction_error'] < 1e-6
+    exported = client.get(base + '/export')
+    assert exported.status_code == 200
+    import csv
+    rows = 0
+    for rows, row in enumerate(csv.DictReader(io.StringIO(exported.text)), 1):
+        wanted = expected.iloc[(rows - 1) % 5]
+        assert int(row['row_number']) == rows
+        assert row['prediction'] == wanted.prediction
+        assert float(row['ddos_probability']) == pytest.approx(wanted.ddos_probability, abs=1e-12)
+    assert rows == 100000
+    assert not store.exports
+    assert client.delete(base).status_code == 204
+    assert not list(store.root.iterdir())
+
+
+def test_sqlite_fills_mid_ingestion_without_publishing(client, bundle, monkeypatch):
+    store = client.app.state.analyses
+    monkeypatch.setattr(store, 'batch_rows', 100)
+    monkeypatch.setattr(store, 'max_disk_bytes', 512 * 1024)
+    frame = pd.DataFrame(1., index=range(5000), columns=bundle[1]['feature_schema'])
+    calls = 0
+    def recording(artifact, chunk):
+        nonlocal calls
+        calls += 1
+        return predict_batch(artifact, chunk)
+    monkeypatch.setattr('src.predict.predict_batch', recording)
+    response = upload(client, frame)
+    assert response.status_code == 503, response.text
+    assert response.json()['error']['code'] == 'storage_full'
+    assert calls > 1
+    assert not store.sessions and not list(store.root.iterdir())
+    assert not store.ingestion.locked() and store.upload_bytes == 0
+
+
+def test_export_disconnect_releases_file_lease(client, bundle):
+    import asyncio
+    from starlette.requests import ClientDisconnect
+    from apps.api.analyses import ExportResponse
+    store = client.app.state.analyses
+    id = upload(client, bundle[1]['explanation_sample'].iloc[:2]).json()['id']
+    lease = store.export(id)
+    async def disconnected():
+        return {'type': 'http.disconnect'}
+    async def send(message):
+        if message['type'] == 'http.response.body':
+            raise OSError('synthetic disconnected client')
+    with pytest.raises(ClientDisconnect):
+        asyncio.run(ExportResponse(lease)({'type': 'http', 'asgi': {'spec_version': '2.4'}}, disconnected, send))
+    assert lease.closed and not store.exports
+    assert client.delete(f'/api/v1/analyses/{id}').status_code == 204
+    assert not list(store.root.iterdir())
+
+
+def test_sql_query_order_uses_indexes_without_temp_sort(client, bundle):
+    from apps.api.result_storage import reading
+    store = client.app.state.analyses
+    id = upload(client, bundle[1]['explanation_sample']).json()['id']
+    with reading(store.sessions[id].path) as connection:
+        for direction in ('asc', 'desc'):
+            plan = connection.execute(f'''EXPLAIN QUERY PLAN
+                SELECT row_number,prediction,probability FROM flows INDEXED BY probability_{direction}
+                WHERE prediction=1 AND probability BETWEEN 0 AND 1
+                ORDER BY probability {direction}, row_number ASC LIMIT 100 OFFSET 10''').fetchall()
+            assert all('TEMP B-TREE' not in row[-1] for row in plan)
+
+
+def test_large_query_integers_preserve_empty_and_not_found_responses(client, bundle):
+    id = upload(client, bundle[1]['explanation_sample'].iloc[:2]).json()['id']
+    base = f'/api/v1/analyses/{id}'
+    huge = 10**40
+    assert client.get(base + f'/flows?page={huge}').json()['items'] == []
+    assert client.get(base + f'/flows?row_number={huge}').json()['total'] == 0
+    assert client.get(base + f'/flows/{huge}').status_code == 404
+
+
+def test_upload_filesystem_failure_is_sanitized_and_releases_slot(client, bundle, monkeypatch):
+    store = client.app.state.analyses
+    def unavailable(*args, **kwargs):
+        raise OSError('sensitive private filesystem path')
+    with monkeypatch.context() as patch:
+        patch.setattr('apps.api.analyses.tempfile.TemporaryFile', unavailable)
+        response = upload(client, bundle[1]['explanation_sample'].iloc[:2])
+    assert response.status_code == 503
+    assert response.json()['error']['code'] == 'storage_full'
+    assert 'sensitive' not in response.text
+    assert not store.ingestion.locked() and store.upload_bytes == 0
+    assert not list(store.root.iterdir())

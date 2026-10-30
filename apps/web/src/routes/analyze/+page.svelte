@@ -60,7 +60,7 @@
     ondrop={(event) => { event.preventDefault(); select(event.dataTransfer?.files[0]); }}>
     <UploadSimpleIcon size={32} weight="light" />
     <label for="csv-file" class="block text-lg font-medium">Drop a flow CSV here or choose a file</label>
-    <p id="csv-help" class="mt-2 text-sm leading-6 text-muted-foreground">CIC-IDS2017 · UTF-8 / UTF-8-BOM CSV<br />Up to 200 MB and 50,000 rows. Maximum 256 columns and 5 million cells.</p>
+    <p id="csv-help" class="mt-2 text-sm leading-6 text-muted-foreground">CIC-IDS2017 · UTF-8 / UTF-8-BOM CSV<br />Up to 200 MB and 100,000 rows. Maximum 256 columns and 25.6 million cells.</p>
     <input id="csv-file" type="file" accept=".csv,text/csv" aria-invalid={!!error} aria-describedby={error ? "csv-help csv-error" : "csv-help"} disabled={busy} class="mt-6 block w-full text-sm" onchange={(event) => select(event.currentTarget.files?.[0])} />
     {#if file && !error}<p class="mt-4 text-sm contribution-negative">File checks passed. Ready for server schema validation and detection.</p>{/if}
     {#if file}<p class="mt-5 break-all font-mono text-xs">{file.name} · {(file.size / 1024 / 1024).toFixed(2)} MB</p>{/if}

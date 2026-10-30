@@ -41,7 +41,8 @@ and saved model metadata. Use **Traffic Analysis** to upload a CSV, run real bat
 inference, explore paginated predictions, inspect feature values, and export results.
 See the [CSV usage and API guide](docs/traffic-analysis.md) for requirements and
 local session limits. See the [synthetic traffic processing baseline](docs/performance/traffic-baseline.md)
-for opt-in performance measurements and the staged scalability work. Both services
+for original measurements and the [scalable SQLite integration](docs/performance/scalable-traffic.md)
+for current processing, limits and verification. Both services
 start without a dataset or model;
 model-dependent requests return a clear 503 until a trusted artifact is configured.
 No model training is part of installation, development startup, or build.
@@ -212,7 +213,7 @@ One output row per input row, including duplicates, preserves original row order
 Outputs contain `row_number` (1-based data row), `prediction`, and
 `ddos_probability`. Prediction CSVs are exported without the uploaded raw fields.
 
-The web interface caps uploads at 50,000 rows and 200 MiB and shows paginated results,
+The web interface caps uploads at 100,000 rows and 200 MiB by default and shows paginated results,
 while export downloads all accepted predictions. The CLI has no upload row cap. Files are parsed
 locally and are not submitted to an external service.
 

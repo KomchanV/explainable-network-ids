@@ -124,3 +124,14 @@ def test_oversized_csv_field_is_rejected_explicitly():
     import csv
     with pytest.raises(ValueError, match='Invalid CSV'):
         read_csv(StringIO('x,metadata\n1,' + 'v' * (csv.field_size_limit() + 1) + '\n'))
+
+
+@pytest.mark.parametrize('size', [1, 2, 5])
+def test_strict_chunk_iterator_matches_compatibility_reader(size):
+    from src.data_loader import iter_csv_chunks
+    data = '\ufeff x,metadata\n1,"comma, and\nnewline"\n2,hello\n1,hello\n4,world\n'
+    chunks = list(iter_csv_chunks(StringIO(data), batch_size=size))
+    assert all(len(chunk) <= size for chunk in chunks)
+    pd.testing.assert_frame_equal(pd.concat(chunks, ignore_index=True), read_csv(StringIO(data)))
+    with pytest.raises(ValueError, match='batch_size'):
+        list(iter_csv_chunks(StringIO(data), batch_size=0))

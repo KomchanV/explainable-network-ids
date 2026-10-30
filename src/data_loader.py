@@ -63,17 +63,22 @@ def _text_stream(source):
             yield source
 
 
-def read_csv(source, *, max_rows=None):
-    """Read strict comma-separated UTF-8 CSV in chunks, without silently losing fields.
+def iter_csv_chunks(source, *, batch_size=10_000, max_rows=None, checkpoint=None):
+    """Yield strict, normalized CSV batches without collecting the dataset.
 
-    Chunking bounds parser intermediates; the resulting DataFrame still lives in RAM.
-    max_rows rejects an oversized input rather than silently truncating it.
+    A bounded structural scan precedes parsing to reject the C parser's silent
+    chunk-boundary truncation. The caller owns the stream; close the iterator
+    when stopping early. checkpoint may enforce an external processing deadline.
     """
+    if not isinstance(batch_size, int) or batch_size < 1:
+        raise ValueError('batch_size must be a positive integer.')
+    check = checkpoint or (lambda: None)
     try:
         with _text_stream(source) as stream:
             # Pandas' C parser silently truncates fields at NUL bytes. Reject
             # these before parsing, with bounded memory even for large files.
             while block := stream.read(1_048_576):
+                check()
                 if '\x00' in block:
                     raise ValueError('Invalid CSV: NUL bytes are not allowed.')
             stream.seek(0)
@@ -93,7 +98,9 @@ def read_csv(source, *, max_rows=None):
             # promoted to errors. Check record widths independently first.
             # csv.reader retains one record at a time and applies the same
             # standard-library field-size limit used by API preflight.
-            for record in records:
+            for index, record in enumerate(records):
+                if index % 1024 == 0:
+                    check()
                 if len(record) > len(header):
                     raise ValueError('Invalid CSV: row contains more fields than the header.')
             stream.seek(0)
@@ -101,22 +108,30 @@ def read_csv(source, *, max_rows=None):
                 # Prevent implicit index inference; record widths were checked
                 # above, and any remaining parser warnings are errors.
                 warnings.simplefilter('error', pd.errors.ParserWarning)
-                chunks = []
                 total = 0
-                for chunk in pd.read_csv(stream, chunksize=50_000, low_memory=False,
+                for chunk in pd.read_csv(stream, chunksize=batch_size, low_memory=False,
                                          index_col=False, on_bad_lines='error',
                                          names=header, header=0,
                                          nrows=None if max_rows is None else max_rows + 1):
+                    check()
                     total += len(chunk)
                     if max_rows is not None and total > max_rows:
                         raise ValueError(f'CSV exceeds the {max_rows:,} row limit. Use the CLI for larger files.')
-                    chunks.append(chunk)
-            if not chunks or total == 0:
+                    if len(chunk):
+                        yield normalize_columns(chunk).reset_index(drop=True)
+            if total == 0:
                 raise ValueError('CSV has no data rows.')
-            return normalize_columns(pd.concat(chunks, ignore_index=True))
     except (pd.errors.ParserError, pd.errors.EmptyDataError, pd.errors.ParserWarning,
             UnicodeError, csv.Error) as exc:
         raise ValueError(f'Invalid CSV: {exc}') from exc
+
+
+def read_csv(source, *, max_rows=None):
+    """Compatibility API for training/CLI callers that require a whole frame.
+
+    Analysis ingestion uses iter_csv_chunks directly instead of this wrapper.
+    """
+    return pd.concat(iter_csv_chunks(source, batch_size=50_000, max_rows=max_rows), ignore_index=True)
 
 
 def numeric_frame(frame):
