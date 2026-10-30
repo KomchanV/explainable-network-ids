@@ -40,7 +40,9 @@ Open <http://127.0.0.1:5173> for the web dashboard and
 and saved model metadata. Use **Traffic Analysis** to upload a CSV, run real batch
 inference, explore paginated predictions, inspect feature values, and export results.
 See the [CSV usage and API guide](docs/traffic-analysis.md) for requirements and
-local session limits. Both services start without a dataset or model;
+local session limits. See the [synthetic traffic processing baseline](docs/performance/traffic-baseline.md)
+for opt-in performance measurements and the staged scalability work. Both services
+start without a dataset or model;
 model-dependent requests return a clear 503 until a trusted artifact is configured.
 No model training is part of installation, development startup, or build.
 
