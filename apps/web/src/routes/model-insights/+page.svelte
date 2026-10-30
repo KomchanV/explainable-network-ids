@@ -1,4 +1,5 @@
 <script lang="ts">
+  import CurrentAnalysisExplanation from '#lib/components/CurrentAnalysisExplanation.svelte';
   import { onMount } from 'svelte';
   import { PUBLIC_API_BASE_URL } from '$app/env/public';
   import type { components } from '@ids/api-client';
@@ -26,7 +27,7 @@
 
 <svelte:head><title>Model Insights · Explainable Network IDS</title></svelte:head>
 <div class="flex flex-wrap items-start justify-between gap-4">
-  <div><h1 class="text-3xl font-semibold tracking-tight">Model Insights</h1>
+  <div><h1 class="page-title">Model Insights</h1>
     <p class="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Saved held-out evaluation of the loaded Random Forest. These results describe labeled test data, independently of any current uploaded analysis.</p></div>
   <Button variant="outline" onclick={refresh} disabled={loading}>Refresh evaluation</Button>
 </div>
@@ -83,3 +84,5 @@
     <section aria-labelledby="limits" class="border-t border-border pt-6"><h2 id="limits" class="text-xl font-semibold">Scientific Limitations</h2><ul class="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-muted-foreground">{#each data.limitations as limitation}<li>{limitation}</li>{/each}</ul></section>
   {/if}
 </div>
+
+<CurrentAnalysisExplanation />

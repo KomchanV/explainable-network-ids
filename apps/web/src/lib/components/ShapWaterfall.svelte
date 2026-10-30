@@ -13,7 +13,7 @@
   <div class="flex flex-wrap items-center justify-between gap-3"><h3 class="font-semibold">DDoS probability waterfall</h3>
     <label class="control-label">Visible contributions<select bind:value={top}><option value={12}>Top 12 + other features</option><option value={explanation.feature_contributions.length}>All features</option></select></label>
   </div>
-  <p class="my-3 text-xs text-muted-foreground">↑ Orange increases P(DDoS) · ↓ Teal decreases P(DDoS). Each bar starts at the previous endpoint. Values use probability units.</p>
+  <p class="my-3 text-xs text-muted-foreground">↑ Positive increases P(DDoS) · ↓ Negative decreases P(DDoS). Each bar starts at the previous endpoint. Values use probability units.</p>
   <div class="space-y-2">
     <div class="chart-row"><span>Baseline</span><div class="track"><span class="marker" style:left={`${percent(explanation.base_value)}%`}></span></div><span class="number">{formatNumber(explanation.base_value)}</span></div>
     {#each rows as row}
@@ -31,7 +31,7 @@
   .chart-row { display:grid; grid-template-columns:minmax(9rem, 1fr) minmax(7rem, 2fr) minmax(7rem, auto); gap:.75rem; align-items:center; font-size:.75rem; }
   .track { position:relative; height:1.5rem; background:var(--muted); border-inline:1px solid var(--border); }
   .bar { position:absolute; top:.3rem; height:.9rem; }
-  .increase { background:#ea580c; } .decrease { background:#0d9488; }
+  .increase { background:var(--danger); } .decrease { background:var(--benign); }
   .marker, .endpoint { position:absolute; height:100%; width:2px; background:var(--foreground); transform:translateX(-1px); }
   .endpoint { height:.35rem; bottom:0; opacity:.65; }
   .number { font-family:monospace; text-align:right; }
